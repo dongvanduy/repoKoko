@@ -1,0 +1,221 @@
+{
+    "header_opening_hours": "09:00 - 18:00 (Hàng ngày)",
+    "header_book_now": "ĐẶT LỊCH NGAY",
+    "nav_plan": "Gói",
+    "nav_gallery": "Thư viện",
+    "nav_flow": "Quy trình",
+    "nav_faq": "Hỏi đáp",
+    "hero": {
+        "tagline": "Trải nghiệm văn hóa Nhật Bản",
+        "title_line1": "Vẻ Đẹp Truyền Thống",
+        "title_line2": "Trong Tầm Tay Bạn",
+        "badge_1": "✨ 20,000+ Bộ Kimono",
+        "badge_2": "🏯...",
+        "cta": "KHÁM PHÁ NGAY"
+    },
+    "titles": {
+        "home": "Cho thuê Kimono Kokoro",
+        "booking_step1": "Chọn Gói Kimono",
+        "booking_step2": "Chọn Ngày & Giờ",
+        "booking_step3": "Thông tin khách hàng & Tùy chọn"
+    },
+    "quick_nav": {
+        "plan": "Gói Kimono",
+        "gallery": "Thư viện",
+        "set_contents": "Đồ gồm gì?",
+        "flow": "Quy trình",
+        "faq": "Hỏi đáp"
+    },
+    "sections": {
+        "plans": {
+            "subtitle": "Lựa chọn phổ biến",
+            "title": "Các Gói Kimono"
+        }
+    },
+    "booking": {
+        "nav": {
+            "step1": "1. Chọn Gói & Số lượng",
+            "step2": "2. Ngày & Giờ",
+            "step3": "3. Thông tin & Tùy chọn",
+            "step4": "4. Hoàn tất"
+        },
+        "common": {
+            "per_person": "/ người",
+            "guest_count": "%d khách",
+            "guest_count_plural": "%d khách",
+            "guest_count_10_plus": "10+ khách",
+            "total": "Tổng cộng",
+            "back": "Quay lại",
+            "confirm_booking": "Xác nhận đặt chỗ",
+            "required": "Bắt buộc",
+            "shop": "Cửa hàng",
+            "date_time": "Ngày giờ",
+            "guests": "Số khách",
+            "tax_included": "(Đã bao gồm thuế)",
+            "mobile_total": "Tổng cộng"
+        },
+        "step1": {
+            "title": "Vui lòng chọn số lượng cho từng gói",
+            "quantity_label": "Số lượng khách:",
+            "selected_label": "Đã chọn:",
+            "submit": "Chọn ngày giờ →",
+            "validation_no_plan": "Vui lòng chọn ít nhất 1 gói!"
+        },
+        "step2": {
+            "title": "Vui lòng chọn ngày và giờ cho %d khách",
+            "title_plural": "Vui lòng chọn ngày và giờ cho %d khách",
+            "date_label": "Ngày đến cửa hàng:",
+            "timeslot_label": "Chọn khung giờ:",
+            "time_full": "Hết chỗ",
+            "time_available": "Còn chỗ",
+            "loading_slots": "Đang tải khung giờ...",
+            "checking_availability": "Đang kiểm tra chỗ trống...",
+            "remaining_slots": "Còn {{count}} chỗ",
+            "load_error": "Lỗi tải dữ liệu. Vui lòng thử lại.",
+            "selected_plans": "Gói đã chọn",
+            "total_label": "Tổng cộng (%d khách):",
+            "total_label_plural": "Tổng cộng (%d khách):",
+            "next_cta": "Nhập thông tin →"
+        },
+        "step3": {
+            "info_title": "1. Vui lòng nhập thông tin của bạn.",
+            "fullname": "Họ và tên",
+            "fullname_placeholder": "Nguyễn Văn A",
+            "email": "Email",
+            "email_placeholder": "email@example.com",
+            "phone": "Số điện thoại",
+            "phone_placeholder": "0901234567",
+            "option_title": "2. Vui lòng chọn các tùy chọn bạn muốn.",
+            "guest_label": "Khách {{number}} ({{plan}})",
+            "base_price": "Giá gốc:",
+            "addon_title": "Thêm dịch vụ (Làm tóc, Bảo hiểm...)",
+            "payment_details": "Chi tiết thanh toán"
+        }
+    },
+    "home": {
+        "plans": {
+            "view_detail": "Xem chi tiết"
+        },
+        "set_contents": {
+            "subtitle": "Chi tiết",
+            "title": "Nội Dung Gói Thuê",
+            "description": "Mọi thứ bạn cần để biến hóa hoàn hảo đều đã bao gồm trong giá.",
+            "kimono_title": "Nội dung bộ Kimono",
+            "kimono_alt": "Chi tiết bộ Kimono",
+            "kimono_item1": "Kimono (Theo gói đã chọn)",
+            "kimono_item2": "Đai lưng (Obi)",
+            "kimono_item3": "Dép (Zori) & Tất (Tabi)",
+            "kimono_item4": "Túi xách Nhật Bản",
+            "kimono_item5": "Đồ lót chuyên dụng (Nagajuban, Hadajuban)",
+            "kimono_item6": "Dịch vụ mặc đồ chuyên nghiệp",
+            "yukata_title": "Nội dung bộ Yukata",
+            "yukata_alt": "Chi tiết bộ Yukata",
+            "yukata_item1": "Yukata (Mùa hè)",
+            "yukata_item2": "Đai lưng (Obi)",
+            "yukata_item3": "Guốc gỗ (Geta)",
+            "yukata_item4": "Túi dây rút",
+            "yukata_item5": "Đồ lót mỏng (Hadagi)",
+            "yukata_item6": "Dịch vụ mặc đồ chuyên nghiệp",
+            "note": "Lưu ý: Dịch vụ làm tóc cơ bản đã bao gồm trong gói (đối với nữ). Các kiểu tóc phức tạp hoặc phụ kiện cao cấp có thể tính phí tùy chọn."
+        },
+        "flow": {
+            "subtitle": "Dễ dàng & Tiện lợi",
+            "title": "Quy Trình Thuê Kimono",
+            "step1_title": "Đặt Chỗ & Đến Tiệm",
+            "step1_desc": "Đặt lịch trước qua web để giữ chỗ. Đến tiệm tay không, không cần mang theo gì cả!",
+            "step2_title": "Chọn & Mặc Kimono",
+            "step2_desc": "Chọn bộ Kimono ưng ý từ nhiều mẫu. Chuyên gia sẽ giúp bạn mặc đẹp chuẩn Nhật Bản (khoảng 20p).",
+            "step3_title": "Làm Tóc & Phụ Kiện",
+            "step3_desc": "Tạo kiểu tóc chuyên nghiệp miễn phí/trả phí. Chọn túi xách, guốc gỗ (Geta) phù hợp.",
+            "step4_title": "Dạo Phố & Chụp Ảnh",
+            "step4_desc": "Tự do khám phá phố cổ, chụp những bức ảnh để đời. Gửi hành lý lại tiệm an toàn.",
+            "step5_title": "Trả Đồ",
+            "step5_desc": "Quay lại tiệm trả đồ trước giờ đóng cửa (hoặc chọn gói trả vào ngày hôm sau/trả tại khách sạn).",
+            "cta_title": "Sẵn sàng chưa?",
+            "cta_desc": "Đặt lịch ngay để nhận ưu đãi giảm giá online!",
+            "cta_button": "ĐẶT LỊCH NGAY"
+        },
+        "gallery": {
+            "subtitle": "Thư viện ảnh",
+            "title": "Khách Hàng Của Chúng Tôi",
+            "profile": "@kokoro_kimono",
+            "overlay": "Xem ảnh",
+            "more_button": "Xem thêm bộ sưu tập →",
+            "alt": "Khách hàng mặc Kimono"
+        },
+        "shop": {
+            "heading": "Vị trí cửa hàng",
+            "description": "Hãy ghé thăm chúng tôi để trải nghiệm dịch vụ tốt nhất",
+            "address": "Địa chỉ:",
+            "hours": "Giờ mở cửa:",
+            "hotline": "Hotline:",
+            "cta": "ĐẶT LỊCH NGAY TẠI ĐÂY"
+        },
+        "faq": {
+            "subtitle": "Trợ giúp",
+            "title": "Câu Hỏi Thường Gặp",
+            "q1": {
+                "question": "Hủy lịch có mất phí không?",
+                "answer": "Hủy trước 2 ngày: Miễn phí. Hủy trước 1 ngày hoặc trong ngày: 100% phí. Vui lòng liên hệ sớm nhất có thể nếu bạn thay đổi kế hoạch."
+            },
+            "q2": {
+                "question": "Tôi cần mang theo gì khi đến cửa hàng?",
+                "answer": "Bạn không cần mang theo bất cứ thứ gì! Gói thuê của chúng tôi đã bao gồm đầy đủ: Kimono, đai lưng (Obi), túi xách, guốc gỗ (Geta) và làm tóc cơ bản."
+            },
+            "q3": {
+                "question": "Mặc Kimono mất bao lâu?",
+                "answer": "Quá trình chọn đồ và mặc đồ thường mất khoảng 30 - 45 phút. Vào mùa cao điểm có thể lâu hơn một chút, bạn nên đến sớm 10 phút nhé."
+            },
+            "q4": {
+                "question": "Có size cho người nước ngoài hoặc người to con không?",
+                "answer": "Có ạ! Chúng tôi có đủ các size từ S đến 3XL, phù hợp với chiều cao lên đến 190cm. Hãy yên tâm nhé!"
+            }
+        },
+        "footer": {
+            "about": "Về chúng tôi",
+            "privacy": "Chính sách bảo mật",
+            "contact": "Liên hệ"
+        },
+        "sticky": {
+            "call_now": "Gọi ngay",
+            "book_now": "ĐẶT LỊCH NGAY"
+        }
+    },
+    "detail": {
+        "back": "Quay lại",
+        "price_label": "Giá trọn gói",
+        "includes_title": "Gói này bao gồm:",
+        "include0": "Kimono/Yukata",
+        "include1": "Đai lưng (Obi)",
+        "include2": "Dép (Zori) & Tất (Tabi)",
+        "include3": "Túi xách Nhật Bản",
+        "include4": "Dịch vụ mặc đồ",
+        "include5": "Làm tóc cơ bản",
+        "booking_title": "Thông tin đặt chỗ",
+        "fullname": "Họ và tên",
+        "fullname_placeholder": "Nguyễn Văn A",
+        "date": "Ngày đến",
+        "guests": "Số lượng người",
+        "email": "Email",
+        "time": "Giờ đến",
+        "phone": "Số điện thoại",
+        "submit": "Xác nhận đặt chỗ"
+    },
+    "success": {
+        "title": "Đặt chỗ thành công",
+        "thanks": "Cảm ơn bạn!",
+        "received": "Chúng tôi đã nhận được yêu cầu đặt chỗ của {{name}}.",
+        "plan": "Gói: {{plan}}",
+        "date": "Ngày: {{date}}",
+        "time": "Giờ đến: {{time}}",
+        "back_home": "Trở về trang chủ"
+    },
+    "login": {
+        "title": "Login Admin",
+        "heading": "Đăng nhập Quản trị",
+        "username": "Tài khoản",
+        "password": "Mật khẩu",
+        "submit": "Đăng nhập",
+        "back_home": "← Trang chủ"
+    }
+}

@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="<%= getLocale() %>">
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/img/common/logo.svg">
+    <title><%= pageTitle %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bgBase: '#fdfbf7', // Màu kem nền nã hơn
+                        main: '#544A47', 
+                        accent: '#BA2636',
+                        gold: '#C5A059' // Thêm màu vàng sang trọng
+                    },
+                    fontFamily: {
+                        serif: ['Georgia', 'serif'] // Font chữ có chân cho tiêu đề
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-bgBase text-main font-sans antialiased selection:bg-accent selection:text-white">
+
+
+    <header id="main-header" class="fixed top-0 w-full z-50 transition-transform duration-300 shadow-md">
+        
+        <div class="bg-main text-white py-2 px-5 text-[10px] md:text-xs font-medium tracking-wide border-b border-white/10">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-2">
+                
+                <div class="flex items-center gap-4 md:gap-6">
+                    <div class="flex items-center gap-2 opacity-90">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-4 md:w-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span><%= __('header_opening_hours') %></span>
+                    </div>
+                    <a href="tel:08096310559" class="flex items-center gap-2 hover:text-gold transition group">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-4 md:w-4 text-gold group-hover:animate-bounce" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                        </svg>
+                        <span class="underline decoration-gold decoration-1 underline-offset-2">080-9631-0559</span>
+                    </a>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <span class="hidden md:inline text-white/50">Language:</span>
+                    <div class="flex items-center gap-3 text-white/80">
+                        <% const activeClass = "font-bold text-gold scale-110"; %>
+                        <% const normalClass = "hover:text-white transition hover:scale-110 opacity-70 hover:opacity-100"; %>
+                        <a href="/change-lang/vi" class="flex items-center gap-1 <%= getLocale() === 'vi' ? activeClass : normalClass %>">
+                            <img src="https://flagcdn.com/w20/vn.png" class="w-4 h-auto shadow-sm" alt="VN"> VI
+                        </a>
+                        <span class="text-white/20">|</span>
+                        
+                        <a href="/change-lang/jp" class="flex items-center gap-1 <%= getLocale() === 'jp' ? activeClass : normalClass %>">
+                            <img src="https://flagcdn.com/w20/jp.png" class="w-4 h-auto shadow-sm" alt="JP"> JP
+                        </a>
+                        <span class="text-white/20">|</span>
+
+                        <a href="/change-lang/zh" class="flex items-center gap-1 <%= getLocale() === 'zh' ? activeClass : normalClass %>">
+                            <img src="https://flagcdn.com/w20/cn.png" class="w-4 h-auto shadow-sm" alt="ZH"> ZH
+                        </a>
+                        <span class="text-white/20">|</span>
+
+                        <a href="/change-lang/en" class="flex items-center gap-1 <%= getLocale() === 'en' ? activeClass : normalClass %>">
+                            <img src="https://flagcdn.com/w20/us.png" class="w-4 h-auto shadow-sm" alt="EN"> EN
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-[#EFE5E3] shadow-sm transition-colors duration-300">
+            <div class="max-w-7xl mx-auto px-5 h-[46px] md:h-[54px] flex items-center justify-between">
+                
+                <a href="/" class="h-14 md:h-16 flex items-center hover:opacity-80 transition">
+                    <img src="/img/common/logo.svg" alt="Logo" class="h-full w-auto object-contain">
+                </a>
+
+                <div class="flex items-center gap-4 md:gap-6">
+
+                    <a href="https://www.facebook.com/profile.php?id=61581964378678&sk=photos" target="_blank" class="transition-all duration-300 hover:scale-90 hover:brightness-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
+                            class="w-8 h-8 text-[#1877F2]">
+                            <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
+                        </svg>
+                    </a>
+
+                    <a href="https://tiktok.com" target="_blank" class="transition-all duration-300 hover:scale-90 hover:opacity-60">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
+                            class="w-8 h-8 text-black"> <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                        </svg>
+                    </a>
+
+                    <a href="https://www.instagram.com/kokoroo_kimono/" target="_blank" class="transition-all duration-300 hover:scale-90 hover:brightness-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
+                            class="w-8 h-8 text-[#E4405F]">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                        </svg>
+                    </a>
+
+                    <a href="/booking-step1" class="hidden md:flex bg-accent text-white px-5 py-2 text-sm rounded-full font-bold shadow-lg hover:bg-red-700 transition items-center gap-2">
+                        <span>📅</span>
+                        <span><%= __('header_book_now') %></span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="relative w-full h-screen md:h-[100dvh]">
+        
+        <div class="swiper mySwiper w-full h-full">
+            <div class="swiper-wrapper">
+                <% if (typeof heroImages !== 'undefined' && heroImages && heroImages.length > 0) { %>
+                    
+                    <% heroImages.forEach(img => { %>
+                        <div class="swiper-slide relative">
+                            <img src="<%= img %>" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/40"></div>
+                        </div>
+                    <% }) %>
+
+                <% } else { %>
+                    <div class="swiper-slide relative">
+                        <img src="https://static.kyotokimonorental.com/app/img/top/hero/autumn/vi/sp/hero01.webp" 
+                             class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-black/40"></div>
+                    </div>
+                <% } %>
+            </div>
+            <div class="swiper-pagination"></div>
+        </div>
+
+        <div class="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+            <div class="text-center text-white p-5 animate-fade-in-up pointer-events-auto">
+                <span class="block text-gold font-serif text-base md:text-lg mb-4 italic tracking-wider drop-shadow-md"><%= __('hero.tagline') %></span>
+                
+                <h1 class="text-3xl md:text-5xl font-bold font-serif leading-tight mb-6 drop-shadow-lg max-w-4xl mx-auto">
+                    <%= __('hero.title_line1') %> <br> <%= __('hero.title_line2') %>
+                </h1>
+                
+                <a href="#plans" class="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-accent px-8 py-3 font-bold text-white transition-all hover:bg-red-700 hover:ring-4 hover:ring-red-200">
+                    <span><%= __('hero.cta') %></span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 transition-transform group-hover:translate-x-1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="quick-nav-placeholder" class="h-0"></div>
+
+    <div id="quick-nav" class="bg-white border-b border-gray-100 shadow-sm z-40 transition-all duration-300 w-full">
+    <div class="max-w-7xl mx-auto px-5">
+        <div class="flex flex-nowrap w-full gap-2 overflow-x-auto md:overflow-visible">
+            
+            <a href="#plans" class="nav-item group flex-1 min-w-[80px] flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 p-2 rounded-lg hover:bg-red-50 transition cursor-pointer text-center">
+                <span class="text-xl">👘</span>
+                <span class="text-xs md:text-sm font-bold text-gray-600 group-hover:text-accent"><%= __('quick_nav.plan') %></span>
+            </a>
+            
+            <a href="#gallery" class="nav-item group flex-1 min-w-[80px] flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 p-2 rounded-lg hover:bg-red-50 transition cursor-pointer text-center">
+                <span class="text-xl">📸</span>
+                <span class="text-xs md:text-sm font-bold text-gray-600 group-hover:text-accent"><%= __('quick_nav.gallery') %></span>
+            </a>
+
+            <a href="#flow" class="nav-item group flex-1 min-w-[80px] flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 p-2 rounded-lg hover:bg-red-50 transition cursor-pointer text-center">
+                <span class="text-xl">🔄</span>
+                <span class="text-xs md:text-sm font-bold text-gray-600 group-hover:text-accent"><%= __('quick_nav.flow') %></span>
+            </a>
+
+            <a href="#faq" class="nav-item group flex-1 min-w-[80px] flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 p-2 rounded-lg hover:bg-red-50 transition cursor-pointer text-center">
+                <span class="text-xl">❓</span>
+                <span class="text-xs md:text-sm font-bold text-gray-600 group-hover:text-accent"><%= __('quick_nav.faq') %></span>
+            </a>
+        </div>
+    </div>
+</div>
+
+
+        <section id="plans" class="py-20 px-5">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <span class="text-accent font-bold text-sm tracking-widest uppercase mb-2 block"><%= __('sections.plans.subtitle') %></span>
+                    <h2 class="text-3xl md:text-4xl font-serif font-bold text-main"><%= __('sections.plans.title') %></h2>
+                    <div class="w-20 h-1 bg-gold mx-auto mt-6"></div>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-10">
+                    <% plans.forEach(plan => { %>
+                        <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition duration-300 transform hover:-translate-y-1">
+                            <div class="h-64 overflow-hidden relative group">
+                                <img src="<%= plan.image || plan.img %>" alt="<%= __(plan.title) %>" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
+                                <div class="absolute top-0 right-0 bg-accent text-white px-3 py-1 rounded-bl-lg font-bold tracking-wider shadow-sm">
+                                    <%= formatPrice(plan.price) %>
+                                </div>
+                            </div>
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold mb-2 text-gray-800"><%= getLocalizedText(plan.title) %></h3>
+                                <p class="text-gray-600 mb-4 line-clamp-2 min-h-[3rem]">
+                                    <%= getLocalizedText(plan.desc) %>
+                                </p>
+                                
+                                <ul class="mb-6 space-y-2">
+                                    <% (plan.features || []).slice(0, 3).forEach(feature => { %>
+                                        <li class="flex items-center text-sm text-gray-500">
+                                            <span class="text-accent mr-2">✓</span> <%= feature %>
+                                        </li>
+                                    <% }) %>
+                                </ul>
+                                <a href="/plan/<%= plan.id || plan._id %>" class="block w-full text-center bg-gray-800 text-white py-3 rounded-lg hover:bg-accent transition duration-300 font-bold">
+                                    <%= __('home.plans.view_detail') %> </a>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+        </section>
+
+<!-- <section id="set-contents" class="py-16 bg-[#fdfbf7] border-t border-gray-100">
+        <div class="max-w-5xl mx-auto px-5">
+            <div class="text-center mb-12">
+                <span class="text-accent font-bold text-sm tracking-widest uppercase mb-2 block"><%= __('home.set_contents.subtitle') %></span>
+                <h2 class="text-3xl md:text-4xl font-serif font-bold text-main"><%= __('home.set_contents.title') %></h2>
+                <p class="text-gray-500 mt-4 text-sm md:text-base"><%= __('home.set_contents.description') %></p>
+                <div class="w-20 h-1 bg-gold mx-auto mt-6"></div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-10 items-start">
+                
+                <div class="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition duration-300">
+                    <h3 class="text-xl font-bold text-main text-center mb-4 border-b border-gray-100 pb-3">
+                        👘 <%= __('home.set_contents.kimono_title') %>
+                    </h3>
+                    <div class="aspect-[4/3] rounded-lg overflow-hidden mb-4 border border-gray-100">
+                        <img src="https://static.kyotokimonorental.com/app/img/plan/set-contents-vi.webp" 
+                             alt="<%= __('home.set_contents.kimono_alt') %>" 
+                             class="w-full h-full object-contain hover:scale-105 transition duration-500">
+                    </div>
+                    <ul class="text-sm text-gray-600 space-y-2 pl-4 list-disc marker:text-accent">
+                        <li><%= __('home.set_contents.kimono_item1') %></li>
+                        <li><%= __('home.set_contents.kimono_item2') %></li>
+                        <li><%= __('home.set_contents.kimono_item3') %></li>
+                        <li><%= __('home.set_contents.kimono_item4') %></li>
+                        <li><%= __('home.set_contents.kimono_item5') %></li>
+                        <li><%= __('home.set_contents.kimono_item6') %></li>
+                    </ul>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition duration-300">
+                    <h3 class="text-xl font-bold text-main text-center mb-4 border-b border-gray-100 pb-3">
+                        🎐 <%= __('home.set_contents.yukata_title') %>
+                    </h3>
+                    <div class="aspect-[4/3] rounded-lg overflow-hidden mb-4 border border-gray-100">
+                        <img src="https://static.kyotokimonorental.com/app/img/yukata/set-contents-vi.webp" 
+                             alt="<%= __('home.set_contents.yukata_alt') %>" 
+                             class="w-full h-full object-contain hover:scale-105 transition duration-500">
+                    </div>
+                    <ul class="text-sm text-gray-600 space-y-2 pl-4 list-disc marker:text-accent">
+                        <li><%= __('home.set_contents.yukata_item1') %></li>
+                        <li><%= __('home.set_contents.yukata_item2') %></li>
+                        <li><%= __('home.set_contents.yukata_item3') %></li>
+                        <li><%= __('home.set_contents.yukata_item4') %></li>
+                        <li><%= __('home.set_contents.yukata_item5') %></li>
+                        <li><%= __('home.set_contents.yukata_item6') %></li>
+                    </ul>
+                </div>
+
+            </div>
+
+            <div class="mt-8 text-center bg-white p-4 rounded-xl border border-dashed border-accent/30 mx-auto max-w-3xl">
+                <p class="text-sm text-main font-medium">
+                    <span class="text-xl mr-1">💡</span> 
+                    <strong><%= __('home.set_contents.note') %></strong>
+                </p>
+            </div>
+        </div>
+    </section> -->
+
+        <section id="flow" class="py-16 md:py-24 bg-[#fdfbf7]">
+        <div class="max-w-7xl mx-auto px-5">
+            <div class="text-center mb-16">
+                <span class="text-accent font-bold text-sm tracking-widest uppercase mb-2 block"><%= __('home.flow.subtitle') %></span>
+                <h2 class="text-3xl md:text-4xl font-serif font-bold text-main"><%= __('home.flow.title') %></h2>
+                <div class="w-20 h-1 bg-gold mx-auto mt-6"></div>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative hover:-translate-y-2 transition duration-300">
+                    <div class="absolute -top-5 -left-5 w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg">1</div>
+                    <div class="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center mb-4 mx-auto text-3xl">📅</div>
+                    <h3 class="text-xl font-bold text-center mb-3"><%= __('home.flow.step1_title') %></h3>
+                    <p class="text-gray-500 text-sm text-center leading-relaxed"><%= __('home.flow.step1_desc') %></p>
+                </div>
+
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative hover:-translate-y-2 transition duration-300">
+                    <div class="absolute -top-5 -left-5 w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg">2</div>
+                    <div class="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center mb-4 mx-auto text-3xl">👘</div>
+                    <h3 class="text-xl font-bold text-center mb-3"><%= __('home.flow.step2_title') %></h3>
+                    <p class="text-gray-500 text-sm text-center leading-relaxed"><%= __('home.flow.step2_desc') %></p>
+                </div>
+
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative hover:-translate-y-2 transition duration-300">
+                    <div class="absolute -top-5 -left-5 w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg">3</div>
+                    <div class="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center mb-4 mx-auto text-3xl">💄</div>
+                    <h3 class="text-xl font-bold text-center mb-3"><%= __('home.flow.step3_title') %></h3>
+                    <p class="text-gray-500 text-sm text-center leading-relaxed"><%= __('home.flow.step3_desc') %></p>
+                </div>
+
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative hover:-translate-y-2 transition duration-300">
+                    <div class="absolute -top-5 -left-5 w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg">4</div>
+                    <div class="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center mb-4 mx-auto text-3xl">📸</div>
+                    <h3 class="text-xl font-bold text-center mb-3"><%= __('home.flow.step4_title') %></h3>
+                    <p class="text-gray-500 text-sm text-center leading-relaxed"><%= __('home.flow.step4_desc') %></p>
+                </div>
+
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative hover:-translate-y-2 transition duration-300">
+                    <div class="absolute -top-5 -left-5 w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg">5</div>
+                    <div class="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center mb-4 mx-auto text-3xl">↩️</div>
+                    <h3 class="text-xl font-bold text-center mb-3"><%= __('home.flow.step5_title') %></h3>
+                    <p class="text-gray-500 text-sm text-center leading-relaxed"><%= __('home.flow.step5_desc') %></p>
+                </div>
+
+                <div class="bg-gradient-to-br from-accent to-red-800 p-8 rounded-2xl shadow-lg flex flex-col justify-center items-center text-white text-center transform scale-105">
+                    <h3 class="text-2xl font-bold mb-2"><%= __('home.flow.cta_title') %></h3>
+                    <p class="text-white/80 mb-6 text-sm"><%= __('home.flow.cta_desc') %></p>
+                    <a href="/booking-step1" class="bg-white text-accent px-8 py-3 rounded-full font-bold shadow-md hover:bg-gray-100 transition w-full"><%= __('home.flow.cta_button') %></a>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="gallery" class="py-20 px-5 bg-white border-t border-gray-100">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <span class="text-accent font-bold text-sm tracking-widest uppercase mb-2 block"><%= __('home.gallery.subtitle') %></span>
+                    <h2 class="text-3xl md:text-4xl font-serif font-bold text-main"><%= __('home.gallery.title') %></h2>
+                    
+                    <a href="https://www.instagram.com/kokoroo_kimono/" target="_blank" class="inline-flex items-center gap-2 mt-3 text-gray-500 hover:text-accent transition group">
+                        <img src="https://static.kyotokimonorental.com/app/img/icon/icon-instagram.webp" class="w-6 h-6 grayscale group-hover:grayscale-0 transition">
+                        <span class="font-medium"><%= __('home.gallery.profile') %></span>
+                    </a>
+                    
+                    <div class="w-20 h-1 bg-gold mx-auto mt-6"></div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                    <% galleryImages.forEach(img => { %>
+                        <div class="group relative aspect-[3/4] overflow-hidden rounded-2xl cursor-pointer shadow-sm hover:shadow-xl transition duration-500">
+                            <img src="<%= img %>" 
+                                 class="w-full h-full object-cover transition duration-700 group-hover:scale-110" 
+                                 loading="lazy" 
+                                 alt="<%= __('home.gallery.alt') %>">
+                            
+                            <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center">
+                                <span class="bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full border border-white/50 text-sm font-bold flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition duration-300 delay-75">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-red-500">
+                                        <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.5 3c1.76 0 3.31.81 4.505 2.224A6.002 6.002 0 0116.5 3c2.786 0 5.25 2.322 5.25 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                                    </svg>
+                                    <%= __('home.gallery.overlay') %>
+                                </span>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+
+                <div class="text-center mt-12">
+                    <a href="https://www.facebook.com/profile.php?id=61581964378678&sk=photos" target="_blank" class="inline-block border border-main text-main px-10 py-3 rounded-full font-bold hover:bg-main hover:text-white transition duration-300">
+                        <%= __('home.gallery.more_button') %>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-16 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-10">
+            <h2 class="text-3xl font-bold text-main"><%= __('home.shop.heading') %></h2>
+            <p class="text-sub1 mt-2"><%= __('home.shop.description') %></p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8 items-start">
+            
+            <div class="bg-bgBase p-8 rounded-2xl shadow-sm h-full">
+                <h3 class="text-2xl font-bold text-accent mb-4"><%= shops[0].name %></h3>
+                
+                <div class="space-y-4 text-main">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">📍</span>
+                        <div>
+                            <p class="font-bold"><%= __('home.shop.address') %></p>
+                            <p class="text-sub1"><%= shops[0].address %></p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">⏰</span>
+                        <div>
+                            <p class="font-bold"><%= __('home.shop.hours') %></p>
+                            <p class="text-sub1"><%= __('header_opening_hours') %></p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">📞</span>
+                        <div>
+                            <p class="font-bold"><%= __('home.shop.hotline') %></p>
+                            <p class="text-sub1"><a href="tel:08096310559" class="hover:text-accent">080-9631-0559</a></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8">
+                    <a href="/booking-step1" class="block w-full text-center bg-gradient-to-r from-pink-500 to-[#BA2636] text-white font-bold py-3 rounded-full shadow-md hover:shadow-xl hover:-translate-y-1 transition">
+                        <%= __('home.shop.cta') %>
+                    </a>
+                </div>
+            </div>
+
+            <div class="rounded-2xl overflow-hidden shadow-lg h-[400px] border border-gray-200 relative group">
+                <iframe 
+                    src="<%= shops[0].mapEmbed %>" 
+                    width="100%" 
+                    height="100%" 
+                    style="border:0;" 
+                    allowfullscreen="" 
+                    loading="lazy" 
+                    referrerpolicy="no-referrer-when-downgrade"
+                    class="w-full h-full grayscale hover:grayscale-0 transition duration-500">
+                </iframe>
+                
+                <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent pointer-events-none transition"></div>
+            </div>
+
+        </div>
+    </div>
+</section>
+    </main>
+<section id="faq" class="py-16 md:py-24 bg-white border-t border-gray-100">
+        <div class="max-w-4xl mx-auto px-5">
+            <div class="text-center mb-12">
+                <span class="text-accent font-bold text-sm tracking-widest uppercase mb-2 block"><%= __('home.faq.subtitle') %></span>
+                <h2 class="text-3xl md:text-4xl font-serif font-bold text-main"><%= __('home.faq.title') %></h2>
+                <div class="w-20 h-1 bg-gold mx-auto mt-6"></div>
+            </div>
+
+            <div class="space-y-4">
+                <details class="group bg-bgBase rounded-2xl p-4 md:p-6 cursor-pointer open:bg-white open:shadow-lg open:ring-1 open:ring-black/5 transition-all duration-300">
+                    <summary class="flex justify-between items-center font-bold text-lg text-main list-none">
+                        <span class="flex items-center gap-3">
+                            <span class="text-accent text-xl">Q.</span>
+                            <%= __('home.faq.q1.question') %>
+                        </span>
+                        <span class="transition group-open:rotate-180">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-gray-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                            </svg>
+                        </span>
+                    </summary>
+                    <div class="mt-4 text-gray-600 leading-relaxed text-sm md:text-base pl-8 border-l-2 border-accent/20">
+                        <p><%= __('home.faq.q1.answer') %></p>
+                    </div>
+                </details>
+
+                <details class="group bg-bgBase rounded-2xl p-4 md:p-6 cursor-pointer open:bg-white open:shadow-lg open:ring-1 open:ring-black/5 transition-all duration-300">
+                    <summary class="flex justify-between items-center font-bold text-lg text-main list-none">
+                        <span class="flex items-center gap-3">
+                            <span class="text-accent text-xl">Q.</span>
+                            <%= __('home.faq.q2.question') %>
+                        </span>
+                        <span class="transition group-open:rotate-180">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-gray-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                            </svg>
+                        </span>
+                    </summary>
+                    <div class="mt-4 text-gray-600 leading-relaxed text-sm md:text-base pl-8 border-l-2 border-accent/20">
+                        <p><%= __('home.faq.q2.answer') %></p>
+                    </div>
+                </details>
+
+                <details class="group bg-bgBase rounded-2xl p-4 md:p-6 cursor-pointer open:bg-white open:shadow-lg open:ring-1 open:ring-black/5 transition-all duration-300">
+                    <summary class="flex justify-between items-center font-bold text-lg text-main list-none">
+                        <span class="flex items-center gap-3">
+                            <span class="text-accent text-xl">Q.</span>
+                            <%= __('home.faq.q3.question') %>
+                        </span>
+                        <span class="transition group-open:rotate-180">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-gray-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                            </svg>
+                        </span>
+                    </summary>
+                    <div class="mt-4 text-gray-600 leading-relaxed text-sm md:text-base pl-8 border-l-2 border-accent/20">
+                        <p><%= __('home.faq.q3.answer') %></p>
+                    </div>
+                </details>
+
+                <details class="group bg-bgBase rounded-2xl p-4 md:p-6 cursor-pointer open:bg-white open:shadow-lg open:ring-1 open:ring-black/5 transition-all duration-300">
+                    <summary class="flex justify-between items-center font-bold text-lg text-main list-none">
+                        <span class="flex items-center gap-3">
+                            <span class="text-accent text-xl">Q.</span>
+                            <%= __('home.faq.q4.question') %>
+                        </span>
+                        <span class="transition group-open:rotate-180">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-gray-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                            </svg>
+                        </span>
+                    </summary>
+                    <div class="mt-4 text-gray-600 leading-relaxed text-sm md:text-base pl-8 border-l-2 border-accent/20">
+                        <p><%= __('home.faq.q4.answer') %></p>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </section>
+    <footer class="bg-[#2c2725] text-white/80 py-6 text-center border-t-4 border-accent">
+        <div class="max-w-4xl mx-auto px-5">
+            <img src="/img/common/logo.svg" alt="Logo" class="h-16 mx-auto mb-2 brightness-0 invert opacity-50">
+            <div class="flex justify-center gap-6 mb-2 text-sm">
+                <a href="#" class="hover:text-white"><%= __('home.footer.about') %></a>
+                <a href="#" class="hover:text-white"><%= __('home.footer.privacy') %></a>
+                <a href="#" class="hover:text-white"><%= __('home.footer.contact') %></a>
+            </div>
+            <p class="text-xs text-white/40">© 2026 Kokoro Kimono Rental. All rights reserved.</p>
+        </div>
+    </footer>
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script>
+        var swiper = new Swiper(".mySwiper", {
+            effect: "fade", // Hiệu ứng mờ dần sang trọng (Senior choice)
+            fadeEffect: { crossFade: true },
+            speed: 1500, // Tốc độ chuyển cảnh chậm rãi
+            autoplay: {
+                delay: 4000, // Tự chạy sau 4 giây
+                disableOnInteraction: false,
+            },
+            pagination: {
+                el: ".swiper-pagination",
+                clickable: true,
+            },
+        });
+
+        // 👇 MỚI: Swiper cho Thẻ Sản Phẩm
+        var swiperPlan = new Swiper(".planSwiper", {
+            loop: true, // Cho phép lướt vòng tròn
+            effect: "slide",
+            speed: 500,
+            
+            // Nút điều hướng
+            navigation: {
+                nextEl: ".swiper-button-next",
+                prevEl: ".swiper-button-prev",
+            },
+            
+            // Dấu chấm phân trang
+            pagination: {
+                el: ".swiper-pagination",
+                clickable: true,
+                dynamicBullets: true, // Chỉ hiện vài chấm nếu nhiều ảnh quá
+            },
+
+            // Tắt chức năng vuốt của Slide cha khi vuốt Slide con (Tránh lỗi trên điện thoại)
+            nested: true, 
+        });
+    </script>
+    <div class="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-7xl bg-white border-t border-gray-200 p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-50 md:hidden flex justify-between items-center gap-3">
+        <a href="tel:08096310559" class="flex flex-col items-center justify-center min-w-[60px] text-gray-500 hover:text-main">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+            </svg>
+            <span class="text-[10px] font-bold mt-1"><%= __('home.sticky.call_now') %></span>
+        </a>
+
+        <a href="/booking-step1" class="flex-1 bg-gradient-to-r from-accent to-red-700 text-white font-bold py-3 rounded-full text-center shadow-md flex items-center justify-center gap-2 animate-pulse-slow">
+            <span>📅</span> <%= __('home.sticky.book_now') %>
+        </a>
+    </div>
+
+    <div class="h-[80px] md:hidden"></div>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let lastScrollTop = 0;
+        const header = document.getElementById('main-header');
+        const nav = document.getElementById('quick-nav');
+        const placeholder = document.getElementById('quick-nav-placeholder');
+        
+        // Vị trí ban đầu của thanh Nav (để biết khi nào cần dính)
+        const navOffsetTop = nav.offsetTop; 
+        const navHeight = nav.offsetHeight;
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            // --- 1. XỬ LÝ HEADER (Ẩn/Hiện thông minh) ---
+            if (scrollTop > lastScrollTop && scrollTop > 100) {
+                // Đang kéo xuống & đã cuộn qua 100px -> Ẩn Header
+                header.classList.add('-translate-y-full');
+            } else {
+                // Đang kéo lên -> Hiện Header
+                header.classList.remove('-translate-y-full');
+            }
+
+            // --- 2. XỬ LÝ QUICK NAV (Dính dưới đáy) ---
+            
+            // Nếu cuộn qua vị trí ban đầu của Nav -> Biến nó thành Fixed ở đáy
+            if (scrollTop > navOffsetTop + 100) {
+                // Kích hoạt chế độ Sticky Bottom
+                nav.classList.add('fixed', 'bottom-0', 'left-0', 'border-t', 'shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]');
+                nav.classList.remove('border-b'); // Bỏ border dưới
+                
+                // Giữ chỗ để layout không bị giật (Jump)
+                placeholder.style.height = `${navHeight}px`;
+                
+                // Ẩn thanh Sticky Footer cũ (nếu có) để tránh chồng chéo
+                const oldStickyFooter = document.querySelector('.fixed.bottom-0.z-50.md\\:hidden');
+                if(oldStickyFooter) oldStickyFooter.style.display = 'none';
+
+            } else {
+                // Trả về vị trí cũ (Dưới Banner)
+                nav.classList.remove('fixed', 'bottom-0', 'left-0', 'border-t', 'shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]');
+                nav.classList.add('border-b'); // Trả lại border dưới
+                
+                // Xóa giữ chỗ
+                placeholder.style.height = '0';
+
+                // Hiện lại Sticky Footer cũ (nếu có)
+                const oldStickyFooter = document.querySelector('.fixed.bottom-0.z-50.md\\:hidden');
+                if(oldStickyFooter) oldStickyFooter.style.display = 'flex';
+            }
+
+            lastScrollTop = scrollTop;
+        });
+    });
+</script>
+</body>
+</html>

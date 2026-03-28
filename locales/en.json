@@ -1,0 +1,221 @@
+{
+    "header_opening_hours": "09:00 - 18:00 (Daily)",
+    "header_book_now": "BOOK NOW",
+    "nav_plan": "Plans",
+    "nav_gallery": "Gallery",
+    "nav_flow": "How to rent",
+    "nav_faq": "FAQ",
+    "hero": {
+        "tagline": "Experience Japanese culture",
+        "title_line1": "Traditional Beauty",
+        "title_line2": "Within Your Reach",
+        "badge_1": "✨ 20,000+ Kimono Sets",
+        "badge_2": "🏯...",
+        "cta": "EXPLORE NOW"
+    },
+    "titles": {
+        "home": "Kokoro Kimono Rental",
+        "booking_step1": "Choose Kimono Plan",
+        "booking_step2": "Select Date & Time",
+        "booking_step3": "Guest Info & Options"
+    },
+    "quick_nav": {
+        "plan": "Kimono Plans",
+        "gallery": "Gallery",
+        "set_contents": "What's Included?",
+        "flow": "Process",
+        "faq": "FAQ"
+    },
+    "sections": {
+        "plans": {
+            "subtitle": "Popular choices",
+            "title": "Kimono Plans"
+        }
+    },
+    "booking": {
+        "nav": {
+            "step1": "1. Choose Plan & Quantity",
+            "step2": "2. Date & Time",
+            "step3": "3. Info & Options",
+            "step4": "4. Complete"
+        },
+        "common": {
+            "per_person": "/ person",
+            "guest_count": "%d guest",
+            "guest_count_plural": "%d guests",
+            "guest_count_10_plus": "10+ guests",
+            "total": "Total",
+            "back": "Back",
+            "confirm_booking": "Confirm booking",
+            "required": "Required",
+            "shop": "Shop",
+            "date_time": "Date & time",
+            "guests": "Guests",
+            "tax_included": "(Tax included)",
+            "mobile_total": "Total (incl. options)"
+        },
+        "step1": {
+            "title": "Please choose quantities for each plan",
+            "quantity_label": "Guest quantity:",
+            "selected_label": "Selected guests:",
+            "submit": "Pick date & time →",
+            "validation_no_plan": "Please select at least one plan!"
+        },
+        "step2": {
+            "title": "Choose date & time for %d guest",
+            "title_plural": "Choose date & time for %d guests",
+            "date_label": "Visit date:",
+            "timeslot_label": "Select a time slot:",
+            "time_full": "Fully booked",
+            "time_available": "Available",
+            "loading_slots": "Loading time slots...",
+            "checking_availability": "Checking availability...",
+            "remaining_slots": "{{count}} slots left",
+            "load_error": "Failed to load slots. Please try again.",
+            "selected_plans": "Selected plans",
+            "total_label": "Total (%d guest):",
+            "total_label_plural": "Total (%d guests):",
+            "next_cta": "Enter guest details →"
+        },
+        "step3": {
+            "info_title": "1. Please enter your information.",
+            "fullname": "Full name",
+            "fullname_placeholder": "John Doe",
+            "email": "Email",
+            "email_placeholder": "email@example.com",
+            "phone": "Phone number",
+            "phone_placeholder": "0901234567",
+            "option_title": "2. Choose your desired options.",
+            "guest_label": "Guest {{number}} ({{plan}})",
+            "base_price": "Base price:",
+            "addon_title": "Add services (Hair, Insurance...)",
+            "payment_details": "Payment details"
+        }
+    },
+    "home": {
+        "plans": {
+            "view_detail": "View details"
+        },
+        "set_contents": {
+            "subtitle": "Details",
+            "title": "What's Included",
+            "description": "Everything you need for the perfect look is included in the price.",
+            "kimono_title": "Kimono set contents",
+            "kimono_alt": "Kimono set details",
+            "kimono_item1": "Kimono (selected plan)",
+            "kimono_item2": "Obi belt",
+            "kimono_item3": "Zori sandals & Tabi socks",
+            "kimono_item4": "Japanese handbag",
+            "kimono_item5": "Kimono undergarments (Nagajuban, Hadajuban)",
+            "kimono_item6": "Professional dressing service",
+            "yukata_title": "Yukata set contents",
+            "yukata_alt": "Yukata set details",
+            "yukata_item1": "Yukata (summer wear)",
+            "yukata_item2": "Obi belt",
+            "yukata_item3": "Geta wooden sandals",
+            "yukata_item4": "Drawstring pouch",
+            "yukata_item5": "Light undergarment (Hadagi)",
+            "yukata_item6": "Professional dressing service",
+            "note": "Note: Basic hairstyling is included (for women). Complex styles or premium accessories may incur extra fees."
+        },
+        "flow": {
+            "subtitle": "Easy & Convenient",
+            "title": "How to Rent a Kimono",
+            "step1_title": "Book & Visit",
+            "step1_desc": "Reserve online to secure your slot. Just come to the shop—no need to bring anything!",
+            "step2_title": "Choose & Dress",
+            "step2_desc": "Pick your favorite kimono from many styles. Our experts will dress you (about 20 mins).",
+            "step3_title": "Hair & Accessories",
+            "step3_desc": "Professional hairstyling (free/paid). Choose a matching bag and Geta sandals.",
+            "step4_title": "Explore & Shoot",
+            "step4_desc": "Stroll the old town and take memorable photos. Leave your luggage safely with us.",
+            "step5_title": "Return Items",
+            "step5_desc": "Return before closing time, or choose next-day/hotel drop-off options.",
+            "cta_title": "Ready to go?",
+            "cta_desc": "Book now to get online discounts!",
+            "cta_button": "BOOK NOW"
+        },
+        "gallery": {
+            "subtitle": "Gallery",
+            "title": "Our Guests",
+            "profile": "@kokoro_kimono",
+            "overlay": "View photo",
+            "more_button": "See more collections →",
+            "alt": "Guest wearing Kimono"
+        },
+        "shop": {
+            "heading": "Shop location",
+            "description": "Visit us to enjoy the best service",
+            "address": "Address:",
+            "hours": "Opening hours:",
+            "hotline": "Hotline:",
+            "cta": "BOOK HERE"
+        },
+        "faq": {
+            "subtitle": "Support",
+            "title": "Frequently Asked Questions",
+            "q1": {
+                "question": "Is there a cancellation fee?",
+                "answer": "Cancel 2 days in advance: Free. Cancel 1 day before or same day: 100% fee. Please contact us as soon as possible if your plans change."
+            },
+            "q2": {
+                "question": "What should I bring to the shop?",
+                "answer": "You don't need to bring anything! Our rental package includes kimono, obi belt, handbag, Geta sandals, and basic hairstyling."
+            },
+            "q3": {
+                "question": "How long does dressing take?",
+                "answer": "Choosing and dressing usually takes about 30–45 minutes. During peak seasons it may take a bit longer, so please arrive 10 minutes early."
+            },
+            "q4": {
+                "question": "Do you have sizes for tall or international guests?",
+                "answer": "Yes! We have sizes from S to 3XL, suitable for heights up to 190 cm. Rest assured!"
+            }
+        },
+        "footer": {
+            "about": "About us",
+            "privacy": "Privacy policy",
+            "contact": "Contact"
+        },
+        "sticky": {
+            "call_now": "Call now",
+            "book_now": "BOOK NOW"
+        }
+    },
+    "detail": {
+        "back": "Back",
+        "price_label": "Package price",
+        "includes_title": "This plan includes:",
+        "include0": "Kimono/Yukata",
+        "include1": "Obi belt",
+        "include2": "Zori sandals & Tabi socks",
+        "include3": "Japanese handbag",
+        "include4": "Dressing service",
+        "include5": "Basic hairstyling",
+        "booking_title": "Booking details",
+        "fullname": "Full name",
+        "fullname_placeholder": "John Doe",
+        "date": "Visit date",
+        "guests": "Number of guests",
+        "email": "Email",
+        "time": "Arrival time",
+        "phone": "Phone number",
+        "submit": "Confirm booking"
+    },
+    "success": {
+        "title": "Booking successful",
+        "thanks": "Thank you!",
+        "received": "We have received the booking request from {{name}}.",
+        "plan": "Plan: {{plan}}",
+        "date": "Date: {{date}}",
+        "time": "Arrival time: {{time}}",
+        "back_home": "Back to homepage"
+    },
+    "login": {
+        "title": "Admin Login",
+        "heading": "Admin Sign In",
+        "username": "Username",
+        "password": "Password",
+        "submit": "Log in",
+        "back_home": "← Home"
+    }
+}

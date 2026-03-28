@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="<%= getLocale() %>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= pageTitle %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    // JS để chuyển Tab (Hàm vừa bị thiếu)
+    function openTab(tabName) {
+        // Ẩn tất cả nội dung tab
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        // Bỏ active ở tất cả nút
+        document.querySelectorAll('.tab-btn').forEach(el => {
+            el.classList.remove('border-blue-600', 'text-blue-600');
+            el.classList.add('border-transparent', 'text-gray-500');
+        });
+        
+        // Hiện tab được chọn
+        document.getElementById(tabName).classList.remove('hidden');
+        // Active nút được chọn
+        document.getElementById('btn-' + tabName).classList.add('border-blue-600', 'text-blue-600');
+        document.getElementById('btn-' + tabName).classList.remove('border-transparent', 'text-gray-500');
+    }
+
+    // JS để mở Modal sửa sản phẩm (Sử dụng data attributes)
+    document.addEventListener('DOMContentLoaded', function() {
+        // Bắt sự kiện click cho các nút có class 'btn-edit-product'
+        const editButtons = document.querySelectorAll('.btn-edit-product');
+        
+        editButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const title = this.getAttribute('data-title');
+                const price = this.getAttribute('data-price');
+                const original = this.getAttribute('data-original');
+                const imagesArray = this.getAttribute('data-images');
+                const desc = this.getAttribute('data-desc');
+                const tag = this.getAttribute('data-tag');
+                
+                // Lấy ảnh đầu tiên từ mảng (nếu có)
+                const image = imagesArray ? imagesArray.split(',')[0].trim() : '';
+
+                // Đổ dữ liệu vào Modal
+                document.getElementById('planId').value = id || '';
+                document.getElementById('planTitle').value = title || '';
+                document.getElementById('planPrice').value = price || '';
+                document.getElementById('planOriginal').value = original || '';
+                document.getElementById('planImage').value = image || '';
+                document.getElementById('planDesc').value = desc || '';
+                document.getElementById('planTag').value = tag || '';
+                
+                // Xử lý hiển thị ảnh cũ
+                const imgContainer = document.getElementById('currentImages');
+                imgContainer.innerHTML = ''; // Xóa ảnh cũ
+                
+                if (imagesArray) {
+                    const imgs = imagesArray.split(',');
+                    imgs.forEach(src => {
+                        if(src.trim()) {
+                            const img = document.createElement('img');
+                            img.src = src.trim();
+                            img.className = 'w-16 h-16 object-cover rounded border';
+                            imgContainer.appendChild(img);
+                        }
+                    });
+                }
+
+                document.getElementById('modalTitle').innerText = id ? 'Sửa Gói Dịch Vụ' : 'Thêm Gói Mới';
+                document.getElementById('productModal').classList.remove('hidden');
+            });
+        });
+    });
+
+    // Hàm mở modal để Thêm gói mới
+    function openAddModal() {
+        document.getElementById('planId').value = '';
+        document.getElementById('planTitle').value = '';
+        document.getElementById('planPrice').value = '';
+        document.getElementById('planOriginal').value = '';
+        document.getElementById('planImage').value = '';
+        document.getElementById('planDesc').value = '';
+        document.getElementById('planTag').value = '';
+        document.getElementById('currentImages').innerHTML = '';
+        
+        document.getElementById('modalTitle').innerText = 'Thêm Gói Mới';
+        document.getElementById('productModal').classList.remove('hidden');
+    }
+
+    // Hàm đóng Modal
+    function closeModal() {
+        document.getElementById('productModal').classList.add('hidden');
+    }
+</script>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+
+    <header class="bg-white shadow-sm sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="bg-blue-600 text-white p-2 rounded-lg font-bold">WR</div>
+                <h1 class="text-xl font-bold text-gray-900">Admin Dashboard</h1>
+            </div>
+            <div class="flex gap-4">
+                <a href="/" target="_blank" class="text-sm font-medium text-gray-500 hover:text-blue-600">Xem trang chủ ↗</a>
+                <a href="/logout" class="text-sm font-medium text-red-500 hover:text-red-700">Đăng xuất</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <div class="border-b border-gray-200 mb-8">
+            <nav class="-mb-px flex flex-wrap gap-4">
+                <button onclick="openTab('tab-orders')" id="btn-tab-orders" class="tab-btn border-blue-600 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    📦 Quản lý Đơn hàng
+                </button>
+                <button onclick="openTab('tab-products')" id="btn-tab-products" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    👘 Quản lý Sản phẩm
+                </button>
+                <button onclick="openTab('tab-settings')" id="btn-tab-settings" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    ⚙️ Cài đặt chung
+                </button>
+            </nav>
+        </div>
+
+        <div id="tab-orders" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="md:hidden p-4 space-y-4">
+                    <% bookings.forEach(item => { %>
+                        <div class="border border-gray-200 rounded-lg p-4 space-y-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <div class="font-bold text-gray-900"><%= item.fullname %></div>
+                                    <div class="text-xs text-gray-500"><%= item.phone %></div>
+                                </div>
+                                <span class="px-2 py-1 text-xs font-bold rounded bg-yellow-100 text-yellow-800"><%= item.status %></span>
+                            </div>
+                            <div class="text-sm">
+                                <div class="font-medium"><%= item.planName || 'Gói tùy chọn' %></div>
+                                <div class="text-xs text-green-600 font-bold">¥<%= item.totalPrice ? item.totalPrice.toLocaleString() : 0 %></div>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                <span>Ngày đến:</span> <%= item.date %> | <%= item.time %>
+                            </div>
+                            <form action="/admin/delete/<%= item._id %>" method="POST" onsubmit="return confirm('Xóa đơn này?')">
+                                <button class="w-full text-red-500 hover:text-red-700 text-xs font-bold border border-red-200 px-3 py-2 rounded">Xóa</button>
+                            </form>
+                        </div>
+                    <% }) %>
+                </div>
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Khách hàng</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Gói & Giá</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Ngày đến</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase text-center">Trạng thái</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase text-right">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <% bookings.forEach(item => { %>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4">
+                                        <div class="font-bold text-gray-900"><%= item.fullname %></div>
+                                        <div class="text-xs text-gray-500"><%= item.phone %></div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-medium"><%= item.planName || 'Gói tùy chọn' %></div>
+                                        <div class="text-xs text-green-600 font-bold">¥<%= item.totalPrice ? item.totalPrice.toLocaleString() : 0 %></div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm">
+                                        <%= item.date %> <span class="text-gray-400">|</span> <%= item.time %>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="px-2 py-1 text-xs font-bold rounded bg-yellow-100 text-yellow-800"><%= item.status %></span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <form action="/admin/delete/<%= item._id %>" method="POST" onsubmit="return confirm('Xóa đơn này?')">
+                                            <button class="text-red-500 hover:text-red-700 text-xs font-bold border border-red-200 px-3 py-1 rounded">Xóa</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-products" class="tab-content hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-gray-800">Danh sách gói dịch vụ</h3>
+                <button onclick="openAddModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow hover:bg-blue-700 transition">
+                + Thêm gói mới
+            </button>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6">
+                <% plans.forEach(plan => { %>
+    <% const planDesc = plan.desc && typeof plan.desc === 'object' ? (plan.desc.vi || plan.desc.en || plan.desc.jp || plan.desc.zh || '') : (plan.desc || ''); %>
+    <% const planTitle = plan.title && typeof plan.title === 'object' ? (plan.title.vi || plan.title.en || plan.title.jp || plan.title.zh || '') : (plan.title || ''); %>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+        <div class="h-40 w-full relative">
+            <img src="<%= plan.image %>" class="w-full h-full object-cover">
+            <span class="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded"><%= plan.tag %></span>
+        </div>
+        <div class="p-4 flex-1">
+            <h4 class="font-bold text-lg mb-1"><%= planTitle %></h4>
+            <div class="flex gap-2 items-end mb-2">
+                <span class="text-red-600 font-bold text-xl">¥<%= plan.price.toLocaleString() %></span>
+                <span class="text-gray-400 line-through text-sm">¥<%= plan.originalPrice %></span>
+            </div>
+            <p class="text-gray-500 text-xs line-clamp-2"><%= planDesc %></p>
+        </div>
+        <div class="p-4 bg-gray-50 border-t flex justify-between">
+            <button 
+    class="btn-edit-product text-blue-600 font-bold text-sm hover:underline"
+    data-id="<%= plan._id %>"
+    data-title="<%= planTitle %>"
+    data-price="<%= plan.price %>"
+    data-original="<%= plan.originalPrice %>"
+    data-images="<%= plan.images ? plan.images.join(',') : '' %>"
+    data-desc="<%= planDesc %>"
+    data-tag="<%= plan.tag %>"
+>
+    Chỉnh sửa
+</button>
+            
+            <form action="/admin/plan/delete/<%= plan._id %>" method="POST" onsubmit="return confirm('Xóa gói này?')">
+                <button class="text-red-600 font-bold text-sm hover:underline">Xóa</button>
+            </form>
+        </div>
+    </div>
+<% }) %>
+            </div>
+        </div>
+
+        <div id="tab-settings" class="tab-content hidden">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-2xl">
+                <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <span>🖼️</span> Ảnh nền trang chủ (Hero Image)
+                </h3>
+
+                <form action="/admin/config/save" method="POST" enctype="multipart/form-data">
+        
+                    <div class="mb-4">
+                        <p class="text-xs text-gray-400 mb-2">Ảnh đang hiển thị (Bỏ tick để xóa):</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <% 
+                            // Logic xử lý hiển thị ảnh trong Admin (tương tự server.js)
+                            let currentHeroes = [];
+                            if (heroImage) { // heroImage được truyền từ server.js (dòng cũ)
+                                if (Array.isArray(heroImage)) currentHeroes = heroImage;
+                                else if (typeof heroImage === 'string' && heroImage.startsWith('[')) {
+                                    try { currentHeroes = JSON.parse(heroImage); } catch(e) {}
+                                } else { currentHeroes = [heroImage]; }
+                            }
+                            %>
+
+                            <% currentHeroes.forEach((img, index) => { %>
+                                <div class="relative group border rounded-lg overflow-hidden">
+                                    <img src="<%= img %>" class="w-full h-24 object-cover">
+                                    <div class="absolute top-1 right-1">
+                                        <input type="checkbox" name="hero_images_old" value="<%= img %>" checked 
+                                            class="w-5 h-5 accent-red-500 cursor-pointer shadow-sm">
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Thêm ảnh mới (Chọn nhiều)</label>
+                        <input type="file" name="hero_photos" multiple accept="image/*" 
+                            class="block w-full text-sm text-gray-500 border rounded-lg p-2
+                                    file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
+                                    file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
+
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-lg transition">
+                        Lưu Cấu Hình
+                    </button>
+                </form>
+
+            </div>
+        </div>
+
+    </main>
+
+    <div id="productModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl transform transition-all">
+            <div class="px-6 py-4 border-b bg-gray-50 flex justify-between items-center">
+                <h3 id="modalTitle" class="font-bold text-lg">Thêm Gói Mới</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            
+            <form action="/admin/plan/save" method="POST" class="p-6 space-y-4" enctype="multipart/form-data">
+                <input type="hidden" name="id" id="planId">
+                <input type="hidden" name="image" id="planImage"> 
+                <input type="hidden" name="imagesString" id="planImagesString">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tên gói</label>
+                    <input type="text" name="title" id="planTitle" required class="w-full border p-2 rounded">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Giá bán (¥)</label>
+                        <input type="number" name="price" id="planPrice" required class="w-full border p-2 rounded">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Giá gốc (¥)</label>
+                        <input type="number" name="originalPrice" id="planOriginal" class="w-full border p-2 rounded">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">
+                        Chọn ảnh sản phẩm (Có thể chọn nhiều)
+                    </label>
+                    <input type="file" name="photos" multiple accept="image/*" 
+                        class="w-full border p-2 rounded bg-gray-50 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <p class="text-xs text-gray-400 mt-1">Chọn file từ máy tính. Ảnh đầu tiên sẽ làm ảnh đại diện.</p>
+                    
+                    <div id="currentImages" class="flex gap-2 mt-2 overflow-x-auto"></div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tag (Nhãn)</label>
+                    <input type="text" name="tag" id="planTag" class="w-full border p-2 rounded" placeholder="VD: Bán chạy nhất">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Mô tả ngắn</label>
+                    <textarea name="desc" id="planDesc" rows="3" class="w-full border p-2 rounded"></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700">Lưu Sản Phẩm</button>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

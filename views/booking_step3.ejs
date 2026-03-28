@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="<%= getLocale() %>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= pageTitle %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bgBase: 'rgba(248, 244, 230, 1)',
+                        main: '#544A47',
+                        accent: '#BA2636',
+                        sub1: '#8D837F',
+                        bgAccentMain: '#FDF2F3'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* CSS cho Accordion */
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+        details[open] summary ~ * { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Checkbox style */
+        .option-checkbox:checked + div { border-color: #BA2636; background-color: #FDF2F3; }
+    </style>
+</head>
+<body class="bg-bgBase text-main font-sans pb-40">
+
+    <header class="px-8 flex justify-center bg-white shadow-sm sticky top-0 z-50">
+        <a href="/"><img src="/img/common/logo.svg" alt="logo" class="h-14"></a>
+    </header>
+
+    <main class="max-w-[1260px] mx-auto px-5 md:px-8 mt-4">
+        
+        <div class="hidden lg:grid grid-cols-4 gap-4 mb-10 text-sm font-bold text-gray-400">
+            <div class="flex items-center gap-2"><%= __('booking.nav.step1') %></div>
+            <div class="flex items-center gap-2"><%= __('booking.nav.step2') %></div>
+            <div class="flex items-center gap-2 text-accent">
+                <span class="w-2 h-2 rounded-full bg-accent"></span> <%= __('booking.nav.step3') %>
+            </div>
+            <div><%= __('booking.nav.step4') %></div>
+        </div>
+
+        <form action="/booking-finish" method="POST" id="bookingForm">
+            <input type="hidden" name="shopId" value="<%= shop.id %>">
+            <input type="hidden" name="date" value="<%= bookingInfo.date %>">
+            <input type="hidden" name="time" value="<%= bookingInfo.time %>">
+            <input type="hidden" name="plansDataString" value='<%= JSON.stringify(plansData) %>'>
+
+            <div class="grid lg:grid-cols-[1fr_350px] gap-10">
+                <div>
+                    <div class="mb-8">
+                        <h3 class="border-b border-sub1 border-dashed pb-2 mb-3 font-bold text-lg">
+                            <%= __('booking.step3.info_title') %>
+                        </h3>
+                        <div class="bg-white p-6 rounded-xl shadow-sm space-y-5">
+                            <div>
+                                <div class="flex gap-2 mb-2">
+                                    <span class="font-bold"><%= __('booking.step3.fullname') %></span>
+                                    <span class="bg-red-600 text-white text-[10px] px-2 py-[2px] rounded"><%= __('booking.common.required') %></span>
+                                </div>
+                                <input type="text" name="fullname" required placeholder="<%= __('booking.step3.fullname_placeholder') %>" class="w-full border p-3 rounded bg-gray-50 focus:bg-white focus:border-accent outline-none transition">
+                            </div>
+                            <div>
+                                <div class="flex gap-2 mb-2">
+                                    <span class="font-bold"><%= __('booking.step3.email') %></span>
+                                    <span class="bg-red-600 text-white text-[10px] px-2 py-[2px] rounded"><%= __('booking.common.required') %></span>
+                                </div>
+                                <input type="email" name="email" required placeholder="<%= __('booking.step3.email_placeholder') %>" class="w-full border p-3 rounded bg-gray-50 focus:bg-white focus:border-accent outline-none transition">
+                            </div>
+                            <div>
+                                <div class="flex gap-2 mb-2">
+                                    <span class="font-bold"><%= __('booking.step3.phone') %></span>
+                                    <span class="bg-red-600 text-white text-[10px] px-2 py-[2px] rounded"><%= __('booking.common.required') %></span>
+                                </div>
+                                <input type="tel" name="phone" required placeholder="<%= __('booking.step3.phone_placeholder') %>" class="w-full border p-3 rounded bg-gray-50 focus:bg-white focus:border-accent outline-none transition">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hidden lg:block">
+                    <div class="bg-white rounded-xl p-6 shadow-lg sticky top-24 border border-gray-100">
+                        <h3 class="font-bold text-lg mb-4"><%= __('booking.step3.payment_details') %></h3>
+                        
+                        <div class="space-y-3 text-sm border-b pb-4 mb-4">
+                            <div class="flex justify-between">
+                                <span class="text-sub1"><%= __('booking.common.shop') %></span>
+                                <span class="font-bold"><%= shop.name %></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sub1"><%= __('booking.common.date_time') %></span>
+                                <span class="font-bold"><%= bookingInfo.date %> <%= bookingInfo.time %></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sub1"><%= __('booking.common.guests') %></span>
+                                <span class="font-bold"><%= bookingInfo.totalQuantity %></span>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-end">
+                            <span class="font-bold text-lg"><%= __('booking.common.total') %></span>
+                            <span class="text-3xl font-bold text-accent">¥<span id="finalTotalDisplay"><%= baseTotal.toLocaleString() %></span></span>
+                        </div>
+                        <p class="text-xs text-right text-gray-400"><%= __('booking.common.tax_included') %></p>
+
+                        <button type="submit" class="w-full bg-gradient-to-r from-pink-500 to-[#BA2636] text-white font-bold py-3 rounded-full mt-6 shadow-lg hover:shadow-xl hover:-translate-y-1 transition">
+                            <%= __('booking.common.confirm_booking') %>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fixed bottom-0 left-0 w-full bg-white border-t p-3 shadow-[0_-4px_10px_rgba(0,0,0,0.1)] z-50 lg:hidden">
+                <div class="flex justify-between items-center gap-2">
+                    <div class="flex flex-col">
+                        <span class="text-xs text-gray-500"><%= __('booking.common.mobile_total') %></span>
+                        <span class="text-xl font-bold text-accent">¥<span id="mobileTotalDisplay"><%= baseTotal.toLocaleString() %></span></span>
+                    </div>
+                    <button type="submit" class="bg-accent text-white font-bold py-3 px-6 rounded-full shadow-md text-sm">
+                        <%= __('booking.common.confirm_booking') %>
+                    </button>
+                </div>
+            </div>
+
+        </form>
+    </main>
+
+    <script>
+    // 👇 SỬA LẠI: Thêm dấu nháy '' bọc quanh biến EJS để VS Code không báo lỗi
+    
+    // Server sẽ điền số vào giữa dấu nháy, ví dụ: Number('5000')
+    const baseTotal = Number('<%= baseTotal || 0 %>'); 
+
+    // Server sẽ điền chuỗi JSON vào, sau đó ta parse lại thành Object
+    const optionsList = JSON.parse('<%- JSON.stringify(options || []) %>');
+    
+    function updateTotal() {
+        let addedPrice = 0;
+        
+        // Tìm tất cả checkbox đã tick
+        const checkedBoxes = document.querySelectorAll('.option-checkbox:checked');
+        
+        checkedBoxes.forEach(cb => {
+            const optId = cb.value;
+            // Tìm giá tiền của option đó
+            const opt = optionsList.find(o => o.id === optId);
+            if(opt) {
+                addedPrice += Number(opt.price);
+            }
+        });
+
+        const final = baseTotal + addedPrice;
+        
+        // Kiểm tra phần tử tồn tại trước khi gán text (Tránh lỗi null)
+        const elDesktop = document.getElementById('finalTotalDisplay');
+        const elMobile = document.getElementById('mobileTotalDisplay');
+
+        if (elDesktop) elDesktop.innerText = final.toLocaleString();
+        if (elMobile) elMobile.innerText = final.toLocaleString();
+    }
+</script>
+
+</body>
+</html>
