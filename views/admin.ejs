@@ -70,6 +70,11 @@
                 document.getElementById('productModal').classList.remove('hidden');
             });
         });
+
+        const initialTab = window.location.hash ? window.location.hash.replace('#', '') : '';
+        if (initialTab && document.getElementById(initialTab)) {
+            openTab(initialTab);
+        }
     });
 
     // Hàm mở modal để Thêm gói mới
@@ -117,6 +122,9 @@
                 </button>
                 <button onclick="openTab('tab-products')" id="btn-tab-products" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                     👘 Quản lý Sản phẩm
+                </button>
+                <button onclick="openTab('tab-blog')" id="btn-tab-blog" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    📝 Quản lý Blog
                 </button>
                 <button onclick="openTab('tab-settings')" id="btn-tab-settings" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                     ⚙️ Cài đặt chung
@@ -204,7 +212,7 @@
     <% const planTitle = plan.title && typeof plan.title === 'object' ? (plan.title.vi || plan.title.en || plan.title.jp || plan.title.zh || '') : (plan.title || ''); %>
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
         <div class="h-40 w-full relative">
-            <img src="<%= plan.image %>" class="w-full h-full object-cover">
+            <img src="<%= plan.image %>" alt="admin kimono plan image" class="w-full h-full object-cover" loading="lazy" decoding="async">
             <span class="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded"><%= plan.tag %></span>
         </div>
         <div class="p-4 flex-1">
@@ -238,6 +246,125 @@
             </div>
         </div>
 
+        <div id="tab-blog" class="tab-content hidden">
+            <div class="grid lg:grid-cols-[1fr_0.9fr] gap-8 items-start">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">Thêm bài blog mới</h3>
+                    <p class="text-sm text-gray-500 mb-6">
+                        Nhập nội dung bằng tiếng Việt, tiếng Anh, tiếng Nhật hoặc tiếng Trung. Hệ thống sẽ tự tạo bản dịch cho 4 ngôn ngữ.
+                    </p>
+
+                    <form action="/admin/blog/save" method="POST" enctype="multipart/form-data" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tiêu đề</label>
+                            <input type="text" name="title" required class="w-full border border-gray-300 p-3 rounded-lg" placeholder="VD: Best Kimono Rental Near Kiyomizu Temple">
+                        </div>
+
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Slug URL</label>
+                                <input type="text" name="slug" class="w-full border border-gray-300 p-3 rounded-lg" placeholder="bo-trong-se-tu-tao">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ngày đăng</label>
+                                <input type="date" name="date" value="<%= new Date().toISOString().slice(0, 10) %>" class="w-full border border-gray-300 p-3 rounded-lg">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Mô tả ngắn / Meta description</label>
+                            <textarea name="excerpt" rows="3" required class="w-full border border-gray-300 p-3 rounded-lg" placeholder="Tóm tắt ngắn để hiển thị trên listing và meta description."></textarea>
+                        </div>
+
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ảnh thumbnail URL</label>
+                                <input type="url" name="thumbnail" class="w-full border border-gray-300 p-3 rounded-lg" placeholder="https://... hoặc /img/gallery/1.jpg">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Upload thumbnail</label>
+                                <input type="file" name="thumbnail_file" accept="image/*" class="w-full border border-gray-300 p-2 rounded-lg bg-gray-50 text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Keywords</label>
+                            <input type="text" name="keywords" class="w-full border border-gray-300 p-3 rounded-lg" placeholder="kimono rental kyoto, kimono photoshoot Kyoto">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nội dung bài viết</label>
+                            <textarea name="content" rows="14" required class="w-full border border-gray-300 p-3 rounded-lg font-mono text-sm" placeholder="Dùng ## để tạo H2.
+
+## Vì sao nên thuê kimono gần Kiyomizu
+Nội dung đoạn 1...
+
+Nội dung đoạn 2...
+
+## Lịch trình gợi ý
+Nội dung đoạn tiếp theo..."></textarea>
+                            <p class="text-xs text-gray-400 mt-1">Dòng bắt đầu bằng ## sẽ thành H2. Mỗi đoạn cách nhau bằng một dòng trống.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">FAQ</label>
+                            <textarea name="faq" rows="5" class="w-full border border-gray-300 p-3 rounded-lg font-mono text-sm" placeholder="Mỗi dòng một câu hỏi:
+Thuê kimono mất bao lâu? | Thường khoảng 30-45 phút.
+Có thể thuê kimono đôi không? | Có, Kokoro hỗ trợ khách đi đôi."></textarea>
+                        </div>
+
+                        <label class="flex items-center gap-2 text-sm font-medium">
+                            <input type="checkbox" name="isPublished" checked class="w-4 h-4 accent-blue-600">
+                            Xuất bản ngay
+                        </label>
+
+                        <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700">
+                            Lưu bài blog
+                        </button>
+                    </form>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Bài blog đã thêm từ Admin</h3>
+
+                    <% if (!blogs || blogs.length === 0) { %>
+                        <div class="text-sm text-gray-500 bg-gray-50 border border-dashed rounded-lg p-6">
+                            Chưa có bài blog nào trong database. Website vẫn đang hiển thị 5 bài mẫu SEO.
+                        </div>
+                    <% } %>
+
+                    <div class="space-y-4">
+                        <% (blogs || []).forEach(blog => { %>
+                            <% const blogTitle = blog.title && typeof blog.title === 'object' ? (blog.title.vi || blog.title.en || blog.title.jp || blog.title.zh || '') : (blog.title || ''); %>
+                            <% const blogExcerpt = blog.excerpt && typeof blog.excerpt === 'object' ? (blog.excerpt.vi || blog.excerpt.en || blog.excerpt.jp || blog.excerpt.zh || '') : (blog.excerpt || ''); %>
+                            <article class="border border-gray-200 rounded-lg overflow-hidden">
+                                <div class="flex gap-4 p-4">
+                                    <img src="<%= blog.thumbnail || '/img/gallery/1.jpg' %>" alt="admin blog thumbnail" class="w-24 h-24 object-cover rounded-lg shrink-0">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="text-xs px-2 py-1 rounded <%= blog.isPublished ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' %>">
+                                                <%= blog.isPublished ? 'Published' : 'Draft' %>
+                                            </span>
+                                            <time class="text-xs text-gray-400"><%= blog.date %></time>
+                                        </div>
+                                        <h4 class="font-bold text-gray-900 line-clamp-2"><%= blogTitle %></h4>
+                                        <p class="text-xs text-gray-500 mt-1">/<%= blog.slug %></p>
+                                        <p class="text-sm text-gray-600 line-clamp-2 mt-2"><%= blogExcerpt %></p>
+                                    </div>
+                                </div>
+                                <div class="px-4 py-3 bg-gray-50 border-t flex items-center justify-between gap-3">
+                                    <a href="/blog/<%= blog.slug %>" target="_blank" class="text-blue-600 text-sm font-bold hover:underline">Xem bài viết</a>
+                                    <form action="/admin/blog/delete/<%= blog._id %>" method="POST" onsubmit="return confirm('Xóa bài blog này?')">
+                                        <button class="text-red-600 text-sm font-bold hover:underline">Xóa</button>
+                                    </form>
+                                </div>
+                            </article>
+                        <% }) %>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="tab-settings" class="tab-content hidden">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-2xl">
                 <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2">
@@ -262,7 +389,7 @@
 
                             <% currentHeroes.forEach((img, index) => { %>
                                 <div class="relative group border rounded-lg overflow-hidden">
-                                    <img src="<%= img %>" class="w-full h-24 object-cover">
+                                    <img src="<%= img %>" alt="admin uploaded kimono image" class="w-full h-24 object-cover" loading="lazy" decoding="async">
                                     <div class="absolute top-1 right-1">
                                         <input type="checkbox" name="hero_images_old" value="<%= img %>" checked 
                                             class="w-5 h-5 accent-red-500 cursor-pointer shadow-sm">

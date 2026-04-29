@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="<%= locale %>">
+<head>
+  <%- include("partials/seo-head") %>
+</head>
+<body class="bg-bgBase text-main font-sans antialiased">
+  <%- include("partials/site-header") %>
+
+  <main>
+    <section class="bg-white border-b border-gray-100">
+      <div class="max-w-7xl mx-auto px-5 py-16 md:py-24">
+        <p class="text-accent font-bold uppercase tracking-widest text-sm"><%= seoText.blogListingEyebrow %></p>
+        <h1 class="mt-3 font-serif text-4xl md:text-6xl font-bold max-w-4xl leading-tight"><%= seoText.blogListingTitle %></h1>
+        <p class="mt-6 max-w-3xl text-lg leading-relaxed text-gray-700">
+          <%= seoText.blogListingDescription %>
+        </p>
+      </div>
+    </section>
+
+    <section class="py-16 md:py-24">
+      <div class="max-w-7xl mx-auto px-5 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <% posts.forEach((post) => { %>
+          <article class="rounded-lg bg-white border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+            <a href="/blog/<%= post.slug %>" class="block overflow-hidden">
+              <img src="<%= post.thumbnail %>" alt="<%= post.thumbnailAlt %>" class="h-64 w-full object-cover transition duration-500 hover:scale-105" loading="lazy" decoding="async">
+            </a>
+            <div class="p-6 flex flex-col flex-1">
+              <time datetime="<%= post.date %>" class="text-xs font-bold uppercase tracking-widest text-sub1"><%= post.date %></time>
+              <h2 class="mt-3 text-2xl font-bold leading-snug">
+                <a href="/blog/<%= post.slug %>" class="hover:text-accent"><%= post.title %></a>
+              </h2>
+              <p class="mt-4 text-gray-700 leading-relaxed"><%= post.excerpt %></p>
+              <div class="mt-5 flex flex-wrap gap-2">
+                <% post.keywords.forEach((keyword) => { %>
+                  <span class="rounded-full bg-bgBase px-3 py-1 text-xs font-bold text-sub1"><%= keyword %></span>
+                <% }) %>
+              </div>
+              <a href="/blog/<%= post.slug %>" class="mt-6 inline-flex font-bold text-accent hover:underline"><%= seoText.readGuide %></a>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+
+    <section class="py-16 bg-white border-y border-gray-100">
+      <div class="max-w-4xl mx-auto px-5 text-center">
+        <h2 class="font-serif text-3xl md:text-4xl font-bold"><%= seoText.blogCtaTitle %></h2>
+        <p class="mt-4 text-lg leading-relaxed text-gray-700">
+          <%= seoText.blogCtaDescription %>
+        </p>
+        <div class="mt-8 flex flex-wrap justify-center gap-3">
+          <a href="/kimono-rental-kyoto" class="rounded-full bg-main px-8 py-3 font-bold text-white hover:bg-black transition"><%= seoText.viewRentalGuide %></a>
+          <a href="/booking-step1" class="rounded-full bg-accent px-8 py-3 font-bold text-white hover:bg-red-700 transition"><%= seoText.bookNow %></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <%- include("partials/site-footer") %>
+</body>
+</html>

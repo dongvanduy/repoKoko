@@ -16,7 +16,7 @@
 <body class="bg-bgBase text-main font-sans pb-40">
 
     <header class="px-8 flex justify-center bg-white shadow-sm sticky top-0 z-50">
-        <a href="/"><img src="/img/common/logo.svg" alt="logo" class="h-14"></a>
+        <a href="/"><img src="/img/common/logo.svg" alt="Kokoro Kimono Rental Kyoto logo" class="h-14"></a>
     </header>
 
     <main class="max-w-[1260px] mx-auto px-5 md:px-8 mt-4">
@@ -65,7 +65,7 @@
                         <div class="space-y-4">
                             <% selectedPlans.forEach(p => { %>
                                 <div class="flex gap-3">
-                                    <img src="<%= p.image %>" class="w-12 h-12 rounded object-cover">
+                                    <img src="<%= p.image %>" alt="selected kimono rental Kyoto plan" class="w-12 h-12 rounded object-cover" loading="lazy" decoding="async">
                                     <div class="flex-1">
                                         <p class="font-bold text-sm text-main"><%= p.title %></p>
                                         <div class="flex justify-between text-xs text-sub1 mt-1">

@@ -12,7 +12,7 @@
 <body class="bg-bgBase text-main font-sans pb-32">
 
     <header class="px-8 flex justify-center bg-white shadow-sm sticky top-0 z-50">
-        <a href="/"><img src="/img/common/logo.svg" alt="logo" class="h-14"></a>
+        <a href="/"><img src="/img/common/logo.svg" alt="Kokoro Kimono Rental Kyoto logo" class="h-14"></a>
     </header>
 
     <main class="max-w-[1000px] mx-auto px-5">
@@ -32,7 +32,7 @@
                          data-price="<%= plan.price %>">
                         
                         <div class="md:w-[200px] h-[200px] md:h-auto flex-shrink-0 rounded-lg overflow-hidden relative">
-                            <img src="<%= plan.image %>" class="w-full h-full object-cover">
+                            <img src="<%= plan.image || plan.img %>" alt="kimono rental Kyoto booking plan - <%= getLocalizedText(plan.title) %>" class="w-full h-full object-cover" loading="lazy" decoding="async">
                             <% if(plan.tag) { %> <span class="absolute top-2 left-2 bg-yellow-500 text-white text-[10px] font-bold px-2 py-1 rounded"><%= plan.tag %></span> <% } %>
                         </div>
 

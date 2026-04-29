@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="<%= locale %>">
+<head>
+  <%- include("partials/seo-head") %>
+</head>
+<body class="bg-bgBase text-main font-sans antialiased">
+  <%- include("partials/site-header") %>
+
+  <main>
+    <section class="relative min-h-[78vh] flex items-end overflow-hidden">
+      <img src="<%= page.heroImage %>" alt="<%= page.heroAlt %>" class="absolute inset-0 h-full w-full object-cover" fetchpriority="high" decoding="async">
+      <div class="absolute inset-0 bg-black/50"></div>
+      <div class="relative z-10 max-w-7xl mx-auto px-5 pb-16 pt-32 text-white">
+        <p class="text-gold font-bold tracking-widest uppercase text-sm mb-4"><%= seoText.landingHeroEyebrow %></p>
+        <h1 class="font-serif text-4xl md:text-6xl font-bold max-w-4xl leading-tight"><%= seoText.landingH1 %></h1>
+        <p class="mt-6 max-w-2xl text-lg leading-relaxed text-white/90">
+          <%= seoText.landingHeroDescription %>
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="/booking-step1" class="rounded-full bg-accent px-8 py-3 font-bold text-white shadow-lg hover:bg-red-700 transition"><%= seoText.bookKimono %></a>
+          <a href="/kimono-photoshoot-kyoto" class="rounded-full bg-white/90 px-8 py-3 font-bold text-main hover:bg-white transition"><%= seoText.planPhotoshoot %></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-12 bg-white border-b border-gray-100">
+      <div class="max-w-7xl mx-auto px-5 grid gap-4 md:grid-cols-3">
+        <a href="#plans" class="rounded-lg border border-gray-100 bg-bgBase p-5 hover:border-accent transition">
+          <span class="text-xs font-bold uppercase tracking-widest text-accent"><%= seoText.navPlansEyebrow %></span>
+          <h2 class="mt-2 text-xl font-bold"><%= seoText.navPlansTitle %></h2>
+        </a>
+        <a href="#photoshoot" class="rounded-lg border border-gray-100 bg-bgBase p-5 hover:border-accent transition">
+          <span class="text-xs font-bold uppercase tracking-widest text-accent"><%= seoText.navPhotosEyebrow %></span>
+          <h2 class="mt-2 text-xl font-bold"><%= seoText.navPhotosTitle %></h2>
+        </a>
+        <a href="#faq" class="rounded-lg border border-gray-100 bg-bgBase p-5 hover:border-accent transition">
+          <span class="text-xs font-bold uppercase tracking-widest text-accent"><%= seoText.navSupportEyebrow %></span>
+          <h2 class="mt-2 text-xl font-bold"><%= seoText.navSupportTitle %></h2>
+        </a>
+      </div>
+    </section>
+
+    <article class="py-16 md:py-24">
+      <div class="max-w-4xl mx-auto px-5">
+        <% page.sections.forEach((section, index) => { %>
+          <section id="<%= index === 2 ? 'plans' : index === 3 ? 'photoshoot' : '' %>" class="mb-14 scroll-mt-24">
+            <h2 class="font-serif text-3xl md:text-4xl font-bold mb-6"><%= section.heading %></h2>
+            <div class="space-y-5 text-lg leading-relaxed text-gray-700">
+              <% section.paragraphs.forEach((paragraph) => { %>
+                <p><%= paragraph %></p>
+              <% }) %>
+            </div>
+            <% if (section.list && section.list.length) { %>
+              <div class="mt-8 rounded-lg bg-white border border-gray-100 p-6">
+                <h3 class="font-bold text-xl mb-4"><%= section.listTitle %></h3>
+                <ul class="grid gap-3">
+                  <% section.list.forEach((item) => { %>
+                    <li class="flex gap-3 text-gray-700"><span class="text-accent font-bold">-</span><span><%= item %></span></li>
+                  <% }) %>
+                </ul>
+              </div>
+            <% } %>
+          </section>
+        <% }) %>
+      </div>
+    </article>
+
+    <section class="py-16 bg-white border-y border-gray-100">
+      <div class="max-w-7xl mx-auto px-5">
+        <div class="text-center max-w-3xl mx-auto mb-10">
+          <p class="text-accent font-bold uppercase tracking-widest text-sm"><%= seoText.rentalPlansEyebrow %></p>
+          <h2 class="mt-2 font-serif text-3xl md:text-4xl font-bold"><%= seoText.rentalPlansTitle %></h2>
+        </div>
+        <div class="grid gap-6 md:grid-cols-3">
+          <% rentalPlans.forEach((plan) => { %>
+            <div class="rounded-lg border border-gray-100 bg-bgBase p-6 shadow-sm">
+              <h3 class="text-xl font-bold"><%= plan.name %></h3>
+              <p class="mt-2 text-accent font-bold"><%= plan.price %></p>
+              <p class="mt-4 leading-relaxed text-gray-700"><%= plan.description %></p>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-16">
+      <div class="max-w-7xl mx-auto px-5 grid gap-8 lg:grid-cols-[1fr_0.8fr] items-center">
+        <div>
+          <p class="text-accent font-bold uppercase tracking-widest text-sm"><%= seoText.internalGuideEyebrow %></p>
+          <h2 class="mt-2 font-serif text-3xl md:text-4xl font-bold"><%= seoText.internalGuideTitle %></h2>
+          <p class="mt-5 text-lg leading-relaxed text-gray-700">
+            <%= seoText.internalGuideBefore %> <a href="/kimono-photoshoot-kyoto" class="text-accent font-bold underline underline-offset-4"><%= seoText.photoshootGuideLink %></a> <%= seoText.internalGuideAfter %>
+          </p>
+        </div>
+        <img src="/img/gallery/6.jpg" alt="kimono photoshoot Kyoto near Kiyomizu Temple" class="w-full aspect-[4/3] object-cover rounded-lg shadow-lg" loading="lazy" decoding="async">
+      </div>
+    </section>
+
+    <section class="py-16 bg-white border-y border-gray-100">
+      <div class="max-w-7xl mx-auto px-5">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+          <div>
+            <p class="text-accent font-bold uppercase tracking-widest text-sm"><%= seoText.travelGuidesEyebrow %></p>
+            <h2 class="mt-2 font-serif text-3xl md:text-4xl font-bold"><%= seoText.travelGuidesTitle %></h2>
+          </div>
+          <a href="/blog" class="font-bold text-accent hover:underline"><%= seoText.viewAllPosts %></a>
+        </div>
+        <div class="grid gap-6 md:grid-cols-3">
+          <% blogPosts.forEach((post) => { %>
+            <article class="rounded-lg border border-gray-100 bg-bgBase overflow-hidden shadow-sm">
+              <img src="<%= post.thumbnail %>" alt="<%= post.thumbnailAlt %>" class="h-56 w-full object-cover" loading="lazy" decoding="async">
+              <div class="p-5">
+                <time datetime="<%= post.date %>" class="text-xs font-bold uppercase tracking-widest text-sub1"><%= post.date %></time>
+                <h3 class="mt-2 text-xl font-bold leading-snug"><a href="/blog/<%= post.slug %>" class="hover:text-accent"><%= post.title %></a></h3>
+                <p class="mt-3 text-sm leading-relaxed text-gray-600"><%= post.excerpt %></p>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="py-16 md:py-24 scroll-mt-24">
+      <div class="max-w-4xl mx-auto px-5">
+        <p class="text-accent font-bold uppercase tracking-widest text-sm text-center"><%= seoText.faq %></p>
+        <h2 class="mt-2 text-center font-serif text-3xl md:text-4xl font-bold"><%= seoText.landingFaqTitle %></h2>
+        <div class="mt-10 space-y-4">
+          <% page.faq.forEach((item) => { %>
+            <details class="group rounded-lg bg-white p-5 shadow-sm border border-gray-100">
+              <summary class="cursor-pointer list-none font-bold flex items-center justify-between gap-4">
+                <span><%= item.question %></span>
+                <span class="text-accent group-open:rotate-180 transition">v</span>
+              </summary>
+              <p class="mt-4 leading-relaxed text-gray-700"><%= item.answer %></p>
+            </details>
+          <% }) %>
+        </div>
+        <div class="mt-10 text-center">
+          <a href="/booking-step1" class="inline-flex rounded-full bg-accent px-8 py-3 font-bold text-white hover:bg-red-700 transition"><%= seoText.bookKimono %></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <%- include("partials/site-footer") %>
+</body>
+</html>

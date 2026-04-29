@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="<%= locale %>">
+<head>
+  <%- include("partials/seo-head") %>
+</head>
+<body class="bg-bgBase text-main font-sans antialiased">
+  <%- include("partials/site-header") %>
+
+  <main>
+    <article>
+      <header class="bg-white border-b border-gray-100">
+        <div class="max-w-4xl mx-auto px-5 py-14 md:py-20">
+          <nav class="text-sm font-bold text-sub1 mb-6" aria-label="Breadcrumb">
+            <a href="/" class="hover:text-accent"><%= seoText.home %></a>
+            <span class="mx-2">/</span>
+            <a href="/blog" class="hover:text-accent"><%= seoText.navBlog %></a>
+          </nav>
+          <time datetime="<%= post.date %>" class="text-xs font-bold uppercase tracking-widest text-accent"><%= post.date %></time>
+          <h1 class="mt-4 font-serif text-4xl md:text-6xl font-bold leading-tight"><%= post.title %></h1>
+          <p class="mt-6 text-xl leading-relaxed text-gray-700"><%= post.excerpt %></p>
+          <div class="mt-6 flex flex-wrap gap-2">
+            <% post.keywords.forEach((keyword) => { %>
+              <span class="rounded-full bg-bgBase px-3 py-1 text-xs font-bold text-sub1"><%= keyword %></span>
+            <% }) %>
+          </div>
+        </div>
+      </header>
+
+      <figure class="max-w-6xl mx-auto px-5 py-10">
+        <img src="<%= post.thumbnail %>" alt="<%= post.thumbnailAlt %>" class="w-full max-h-[620px] object-cover rounded-lg shadow-lg" fetchpriority="high" decoding="async">
+      </figure>
+
+      <div class="max-w-6xl mx-auto px-5 pb-16 md:pb-24 grid gap-10 lg:grid-cols-[260px_1fr]">
+        <aside class="lg:sticky lg:top-24 lg:self-start">
+          <div class="rounded-lg bg-white border border-gray-100 p-5 shadow-sm">
+            <h2 class="text-base font-bold mb-4"><%= seoText.tableOfContents %></h2>
+            <nav class="grid gap-3 text-sm text-gray-700">
+              <% post.sections.forEach((section, index) => { %>
+                <a href="#section-<%= index %>" class="hover:text-accent"><%= section.heading %></a>
+              <% }) %>
+              <a href="#faq" class="hover:text-accent"><%= seoText.faq %></a>
+            </nav>
+          </div>
+        </aside>
+
+        <div class="min-w-0">
+          <div class="prose-content">
+            <% post.sections.forEach((section, index) => { %>
+              <section id="section-<%= index %>" class="mb-14 scroll-mt-24">
+                <h2 class="font-serif text-3xl md:text-4xl font-bold mb-6"><%= section.heading %></h2>
+                <div class="space-y-5 text-lg leading-relaxed text-gray-700">
+                  <% section.paragraphs.forEach((paragraph) => { %>
+                    <p><%= paragraph %></p>
+                  <% }) %>
+                </div>
+              </section>
+
+              <% if (index === 1) { %>
+                <div class="mb-14 rounded-lg bg-white border border-gray-100 p-6 shadow-sm">
+                  <h2 class="text-2xl font-bold"><%= seoText.interlinkTitle %></h2>
+                  <p class="mt-3 leading-relaxed text-gray-700">
+                    <%= seoText.interlinkBefore %> <a href="/kimono-rental-kyoto" class="text-accent font-bold underline underline-offset-4"><%= seoText.rentalGuideLink %></a>. <%= seoText.interlinkMiddle %> <a href="/kimono-photoshoot-kyoto" class="text-accent font-bold underline underline-offset-4"><%= seoText.photoshootGuideLink %></a><%= seoText.interlinkAfter %>
+                  </p>
+                </div>
+              <% } %>
+            <% }) %>
+          </div>
+
+          <section id="faq" class="mt-16 scroll-mt-24">
+            <p class="text-accent font-bold uppercase tracking-widest text-sm"><%= seoText.faq %></p>
+            <h2 class="mt-2 font-serif text-3xl md:text-4xl font-bold"><%= post.title %> <%= seoText.faq %></h2>
+            <div class="mt-8 space-y-4">
+              <% post.faq.forEach((item) => { %>
+                <details class="group rounded-lg bg-white p-5 shadow-sm border border-gray-100">
+                  <summary class="cursor-pointer list-none font-bold flex items-center justify-between gap-4">
+                    <span><%= item.question %></span>
+                    <span class="text-accent group-open:rotate-180 transition">v</span>
+                  </summary>
+                  <p class="mt-4 leading-relaxed text-gray-700"><%= item.answer %></p>
+                </details>
+              <% }) %>
+            </div>
+          </section>
+
+          <section class="mt-16 rounded-lg bg-main p-8 text-white">
+            <h2 class="font-serif text-3xl font-bold"><%= seoText.postCtaTitle %></h2>
+            <p class="mt-4 text-white/80 leading-relaxed">
+              <%= seoText.postCtaDescription %>
+            </p>
+            <div class="mt-6 flex flex-wrap gap-3">
+              <a href="/booking-step1" class="rounded-full bg-accent px-7 py-3 font-bold text-white hover:bg-red-700 transition"><%= seoText.bookNow %></a>
+              <a href="/kimono-rental-kyoto" class="rounded-full bg-white px-7 py-3 font-bold text-main hover:bg-bgBase transition"><%= seoText.viewRentalPlans %></a>
+            </div>
+          </section>
+        </div>
+      </div>
+    </article>
+
+    <section class="py-16 bg-white border-y border-gray-100">
+      <div class="max-w-7xl mx-auto px-5">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+          <div>
+            <p class="text-accent font-bold uppercase tracking-widest text-sm"><%= seoText.relatedPosts %></p>
+            <h2 class="mt-2 font-serif text-3xl md:text-4xl font-bold"><%= seoText.moreGuides %></h2>
+          </div>
+          <a href="/blog" class="font-bold text-accent hover:underline"><%= seoText.allBlogPosts %></a>
+        </div>
+        <div class="grid gap-6 md:grid-cols-3">
+          <% relatedPosts.forEach((related) => { %>
+            <article class="rounded-lg border border-gray-100 bg-bgBase overflow-hidden shadow-sm">
+              <img src="<%= related.thumbnail %>" alt="<%= related.thumbnailAlt %>" class="h-56 w-full object-cover" loading="lazy" decoding="async">
+              <div class="p-5">
+                <time datetime="<%= related.date %>" class="text-xs font-bold uppercase tracking-widest text-sub1"><%= related.date %></time>
+                <h3 class="mt-2 text-xl font-bold leading-snug"><a href="/blog/<%= related.slug %>" class="hover:text-accent"><%= related.title %></a></h3>
+                <p class="mt-3 text-sm leading-relaxed text-gray-600"><%= related.excerpt %></p>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <%- include("partials/site-footer") %>
+</body>
+</html>

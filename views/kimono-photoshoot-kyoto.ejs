@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="<%= locale %>">
+<head>
+  <%- include("partials/seo-head") %>
+</head>
+<body class="bg-bgBase text-main font-sans antialiased">
+  <%- include("partials/site-header") %>
+
+  <main>
+    <section class="relative min-h-[64vh] flex items-end overflow-hidden">
+      <img src="<%= page.heroImage %>" alt="<%= page.heroAlt %>" class="absolute inset-0 h-full w-full object-cover" fetchpriority="high" decoding="async">
+      <div class="absolute inset-0 bg-black/50"></div>
+      <div class="relative z-10 max-w-7xl mx-auto px-5 pb-14 pt-28 text-white">
+        <p class="text-gold font-bold tracking-widest uppercase text-sm mb-4"><%= seoText.photoshootHeroEyebrow %></p>
+        <h1 class="font-serif text-4xl md:text-6xl font-bold max-w-4xl leading-tight"><%= seoText.photoshootH1 %></h1>
+        <p class="mt-6 max-w-2xl text-lg leading-relaxed text-white/90">
+          <%= seoText.photoshootMetaDescription %>
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="/booking-step1" class="rounded-full bg-accent px-8 py-3 font-bold text-white shadow-lg hover:bg-red-700 transition"><%= seoText.photoshootHeroCta %></a>
+          <a href="/kimono-rental-kyoto" class="rounded-full bg-white/90 px-8 py-3 font-bold text-main hover:bg-white transition"><%= seoText.photoshootRentalCta %></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-16 md:py-24">
+      <div class="max-w-4xl mx-auto px-5">
+        <h2 class="font-serif text-3xl md:text-4xl font-bold mb-6"><%= page.content.heading %></h2>
+        <div class="space-y-5 text-lg leading-relaxed text-gray-700">
+          <% page.content.paragraphs.forEach((paragraph) => { %>
+            <p><%= paragraph %></p>
+          <% }) %>
+        </div>
+
+        <div class="mt-12 grid gap-6 md:grid-cols-2">
+          <% page.content.cards.forEach((card) => { %>
+            <div class="rounded-lg bg-white p-6 border border-gray-100 shadow-sm">
+              <h3 class="text-xl font-bold"><%= card.title %></h3>
+              <ul class="mt-4 space-y-3 text-gray-700">
+                <% card.items.forEach((item) => { %>
+                  <li><%= item %></li>
+                <% }) %>
+              </ul>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-16 bg-white border-y border-gray-100">
+      <div class="max-w-7xl mx-auto px-5 grid gap-6 md:grid-cols-3">
+        <img src="/img/gallery/2.jpg" alt="kimono photoshoot Kyoto street portrait" class="w-full aspect-[3/4] object-cover rounded-lg" loading="lazy" decoding="async">
+        <img src="/img/gallery/7.jpg" alt="couple kimono rental Kyoto photoshoot" class="w-full aspect-[3/4] object-cover rounded-lg" loading="lazy" decoding="async">
+        <img src="/img/gallery/8.jpg" alt="kimono rental near Kiyomizu Temple photo route" class="w-full aspect-[3/4] object-cover rounded-lg" loading="lazy" decoding="async">
+      </div>
+    </section>
+
+    <section id="faq" class="py-16 md:py-24">
+      <div class="max-w-4xl mx-auto px-5">
+        <p class="text-accent font-bold uppercase tracking-widest text-sm text-center"><%= seoText.faq %></p>
+        <h2 class="mt-2 text-center font-serif text-3xl md:text-4xl font-bold"><%= seoText.photoshootFaqTitle %></h2>
+        <div class="mt-10 space-y-4">
+          <% page.faq.forEach((item) => { %>
+            <details class="group rounded-lg bg-white p-5 shadow-sm border border-gray-100">
+              <summary class="cursor-pointer list-none font-bold flex items-center justify-between gap-4">
+                <span><%= item.question %></span>
+                <span class="text-accent group-open:rotate-180 transition">v</span>
+              </summary>
+              <p class="mt-4 leading-relaxed text-gray-700"><%= item.answer %></p>
+            </details>
+          <% }) %>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <%- include("partials/site-footer") %>
+</body>
+</html>

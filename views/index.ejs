@@ -5,7 +5,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/img/common/logo.svg">
-    <title><%= pageTitle %></title>
+    <title><%= typeof seo !== "undefined" && seo.title ? seo.title : pageTitle %></title>
+    <% if (typeof seo !== "undefined" && seo) { %>
+        <meta name="description" content="<%= seo.description %>">
+        <link rel="canonical" href="<%= seo.canonical %>">
+        <meta property="og:site_name" content="Kokoro Kimono Rental">
+        <meta property="og:title" content="<%= seo.title %>">
+        <meta property="og:description" content="<%= seo.description %>">
+        <meta property="og:type" content="<%= seo.type %>">
+        <meta property="og:url" content="<%= seo.canonical %>">
+        <meta property="og:image" content="<%= seo.image %>">
+        <meta property="og:locale" content="en_US">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="<%= seo.title %>">
+        <meta name="twitter:description" content="<%= seo.description %>">
+        <meta name="twitter:image" content="<%= seo.image %>">
+    <% } %>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -24,6 +39,11 @@
             }
         }
     </script>
+    <% if (typeof structuredData !== "undefined" && structuredData && structuredData.length) { %>
+        <% structuredData.forEach(schema => { %>
+            <script type="application/ld+json"><%- jsonLd(schema) %></script>
+        <% }) %>
+    <% } %>
 </head>
 <body class="bg-bgBase text-main font-sans antialiased selection:bg-accent selection:text-white">
 
@@ -80,10 +100,15 @@
             <div class="max-w-7xl mx-auto px-5 h-[46px] md:h-[54px] flex items-center justify-between">
                 
                 <a href="/" class="h-14 md:h-16 flex items-center hover:opacity-80 transition">
-                    <img src="/img/common/logo.svg" alt="Logo" class="h-full w-auto object-contain">
+                    <img src="/img/common/logo.svg" alt="Kokoro Kimono Rental Kyoto logo" class="h-full w-auto object-contain">
                 </a>
 
                 <div class="flex items-center gap-4 md:gap-6">
+                    <nav class="hidden xl:flex items-center gap-5 text-sm font-bold text-main">
+                        <a href="/kimono-rental-kyoto" class="hover:text-accent transition"><%= seoText.navRental %></a>
+                        <a href="/kimono-photoshoot-kyoto" class="hover:text-accent transition"><%= seoText.navPhotoshoot %></a>
+                        <a href="/blog" class="hover:text-accent transition"><%= seoText.navBlog %></a>
+                    </nav>
 
                     <a href="https://www.facebook.com/profile.php?id=61581964378678&sk=photos" target="_blank" class="transition-all duration-300 hover:scale-90 hover:brightness-50">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
@@ -123,7 +148,7 @@
                     
                     <% heroImages.forEach(img => { %>
                         <div class="swiper-slide relative">
-                            <img src="<%= img %>" class="w-full h-full object-cover">
+                            <img src="<%= img %>" alt="kimono rental Kyoto near Kiyomizu Temple at Kokoro Kimono" class="w-full h-full object-cover" fetchpriority="high" decoding="async">
                             <div class="absolute inset-0 bg-black/40"></div>
                         </div>
                     <% }) %>
@@ -131,7 +156,8 @@
                 <% } else { %>
                     <div class="swiper-slide relative">
                         <img src="https://static.kyotokimonorental.com/app/img/top/hero/autumn/vi/sp/hero01.webp" 
-                             class="w-full h-full object-cover">
+                             alt="kimono rental Kyoto near Kiyomizu Temple at Kokoro Kimono"
+                             class="w-full h-full object-cover" fetchpriority="high" decoding="async">
                         <div class="absolute inset-0 bg-black/40"></div>
                     </div>
                 <% } %>
@@ -182,10 +208,31 @@
                 <span class="text-xl">❓</span>
                 <span class="text-xs md:text-sm font-bold text-gray-600 group-hover:text-accent"><%= __('quick_nav.faq') %></span>
             </a>
+
+            <a href="/blog" class="nav-item group flex-1 min-w-[80px] flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 p-2 rounded-lg hover:bg-red-50 transition cursor-pointer text-center">
+                <span class="text-xl"><%= seoText.navBlog %></span>
+                <span class="text-xs md:text-sm font-bold text-gray-600 group-hover:text-accent"><%= seoText.navBlog %></span>
+            </a>
         </div>
     </div>
 </div>
 
+
+        <section class="py-16 px-5 bg-white border-b border-gray-100">
+            <div class="max-w-6xl mx-auto grid gap-8 md:grid-cols-[1.2fr_0.8fr] items-center">
+                <div>
+                    <span class="text-accent font-bold text-sm tracking-widest uppercase mb-2 block"><%= seoText.landingHeroEyebrow %></span>
+                    <h2 class="text-3xl md:text-4xl font-serif font-bold text-main"><%= seoText.navRental %></h2>
+                    <p class="mt-5 text-gray-700 leading-relaxed text-lg">
+                        <%= seoText.landingHeroDescription %>
+                    </p>
+                </div>
+                <div class="flex flex-col sm:flex-row md:flex-col gap-3">
+                    <a href="/kimono-rental-kyoto" class="rounded-full bg-accent px-7 py-3 text-center font-bold text-white shadow-md hover:bg-red-700 transition"><%= seoText.viewRentalGuide %></a>
+                    <a href="/blog" class="rounded-full border border-main px-7 py-3 text-center font-bold text-main hover:bg-main hover:text-white transition"><%= seoText.blogListingTitle %></a>
+                </div>
+            </div>
+        </section>
 
         <section id="plans" class="py-20 px-5">
             <div class="max-w-6xl mx-auto">
@@ -199,7 +246,7 @@
                     <% plans.forEach(plan => { %>
                         <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition duration-300 transform hover:-translate-y-1">
                             <div class="h-64 overflow-hidden relative group">
-                                <img src="<%= plan.image || plan.img %>" alt="<%= __(plan.title) %>" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
+                                <img src="<%= plan.image || plan.img %>" alt="kimono rental Kyoto plan - <%= getLocalizedText(plan.title) %>" class="w-full h-full object-cover transition duration-500 group-hover:scale-110" loading="lazy" decoding="async">
                                 <div class="absolute top-0 right-0 bg-accent text-white px-3 py-1 rounded-bl-lg font-bold tracking-wider shadow-sm">
                                     <%= formatPrice(plan.price) %>
                                 </div>
@@ -345,7 +392,7 @@
                     <h2 class="text-3xl md:text-4xl font-serif font-bold text-main"><%= __('home.gallery.title') %></h2>
                     
                     <a href="https://www.instagram.com/kokoroo_kimono/" target="_blank" class="inline-flex items-center gap-2 mt-3 text-gray-500 hover:text-accent transition group">
-                        <img src="https://static.kyotokimonorental.com/app/img/icon/icon-instagram.webp" class="w-6 h-6 grayscale group-hover:grayscale-0 transition">
+                        <img src="https://static.kyotokimonorental.com/app/img/icon/icon-instagram.webp" class="w-6 h-6 grayscale group-hover:grayscale-0 transition" alt="Kokoro Kimono Instagram gallery" loading="lazy" decoding="async">
                         <span class="font-medium"><%= __('home.gallery.profile') %></span>
                     </a>
                     
@@ -358,7 +405,8 @@
                             <img src="<%= img %>" 
                                  class="w-full h-full object-cover transition duration-700 group-hover:scale-110" 
                                  loading="lazy" 
-                                 alt="<%= __('home.gallery.alt') %>">
+                                 decoding="async"
+                                 alt="kimono photoshoot Kyoto guest near Kiyomizu Temple">
                             
                             <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center">
                                 <span class="bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full border border-white/50 text-sm font-bold flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition duration-300 delay-75">
@@ -440,6 +488,38 @@
                 <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent pointer-events-none transition"></div>
             </div>
 
+        </div>
+    </div>
+</section>
+
+<section class="py-16 md:py-24 bg-bgBase border-t border-gray-100">
+    <div class="max-w-7xl mx-auto px-5">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
+            <div>
+                <span class="text-accent font-bold text-sm tracking-widest uppercase mb-2 block"><%= seoText.blogListingEyebrow %></span>
+                <h2 class="text-3xl md:text-4xl font-serif font-bold text-main"><%= seoText.blogListingTitle %></h2>
+                <p class="mt-4 text-gray-700 max-w-2xl leading-relaxed"><%= seoText.blogListingDescription %></p>
+            </div>
+            <a href="/blog" class="font-bold text-accent hover:underline"><%= seoText.viewAllPosts %></a>
+        </div>
+
+        <div class="grid gap-6 md:grid-cols-3">
+            <% if (typeof featuredPosts !== "undefined" && featuredPosts && featuredPosts.length) { %>
+                <% featuredPosts.forEach(post => { %>
+                    <article class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition">
+                        <a href="/blog/<%= post.slug %>" class="block overflow-hidden">
+                            <img src="<%= post.thumbnail %>" alt="<%= post.thumbnailAlt %>" class="h-56 w-full object-cover transition duration-500 hover:scale-105" loading="lazy" decoding="async">
+                        </a>
+                        <div class="p-5">
+                            <time datetime="<%= post.date %>" class="text-xs font-bold uppercase tracking-widest text-gray-500"><%= post.date %></time>
+                            <h3 class="mt-2 text-xl font-bold leading-snug">
+                                <a href="/blog/<%= post.slug %>" class="hover:text-accent"><%= post.title %></a>
+                            </h3>
+                            <p class="mt-3 text-sm text-gray-600 leading-relaxed"><%= post.excerpt %></p>
+                        </div>
+                    </article>
+                <% }) %>
+            <% } %>
         </div>
     </div>
 </section>
@@ -525,13 +605,13 @@
     </section>
     <footer class="bg-[#2c2725] text-white/80 py-6 text-center border-t-4 border-accent">
         <div class="max-w-4xl mx-auto px-5">
-            <img src="/img/common/logo.svg" alt="Logo" class="h-16 mx-auto mb-2 brightness-0 invert opacity-50">
+            <img src="/img/common/logo.svg" alt="Kokoro Kimono Rental Kyoto logo" class="h-16 mx-auto mb-2 brightness-0 invert opacity-50" loading="lazy" decoding="async">
             <div class="flex justify-center gap-6 mb-2 text-sm">
-                <a href="#" class="hover:text-white"><%= __('home.footer.about') %></a>
-                <a href="#" class="hover:text-white"><%= __('home.footer.privacy') %></a>
-                <a href="#" class="hover:text-white"><%= __('home.footer.contact') %></a>
+                <a href="/kimono-rental-kyoto" class="hover:text-white"><%= seoText.navRental %></a>
+                <a href="/kimono-photoshoot-kyoto" class="hover:text-white"><%= seoText.navPhotoshoot %></a>
+                <a href="/blog" class="hover:text-white"><%= seoText.navBlog %></a>
             </div>
-            <p class="text-xs text-white/40">© 2026 Kokoro Kimono Rental. All rights reserved.</p>
+            <p class="text-xs text-white/40"><%= seoText.copyright %></p>
         </div>
     </footer>
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
