@@ -1,474 +1,565 @@
+<%
+const statusStyles = {
+  "Mới": "bg-amber-50 text-amber-800 ring-amber-200",
+  "Đã đặt (Chờ đến)": "bg-amber-50 text-amber-800 ring-amber-200",
+  "Đã xác nhận": "bg-blue-50 text-blue-800 ring-blue-200",
+  "Đã đến": "bg-violet-50 text-violet-800 ring-violet-200",
+  "Hoàn tất": "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  "Đã hủy": "bg-rose-50 text-rose-800 ring-rose-200",
+};
+const noticeMessages = {
+  "plan-saved": "Đã lưu gói dịch vụ.",
+  "plan-deleted": "Đã xóa gói dịch vụ.",
+  "plan-delete-failed": "Không thể xóa gói dịch vụ.",
+  "blog-saved": "Đã lưu bài blog.",
+  "blog-deleted": "Đã xóa bài blog.",
+  "blog-delete-failed": "Không thể xóa bài blog.",
+  "settings-saved": "Đã lưu cấu hình trang chủ.",
+  "booking-updated": "Đã cập nhật trạng thái booking.",
+  "booking-archived": "Đã lưu trữ booking.",
+  "booking-restored": "Đã khôi phục booking.",
+  "booking-not-found": "Không tìm thấy booking.",
+  "booking-update-failed": "Không thể cập nhật booking.",
+  "booking-archive-failed": "Không thể lưu trữ booking.",
+  "booking-restore-failed": "Không thể khôi phục booking.",
+  "note-saved": "Đã thêm ghi chú nội bộ.",
+  "note-empty": "Ghi chú không được để trống.",
+  "note-save-failed": "Không thể lưu ghi chú.",
+  "invalid-status": "Trạng thái không hợp lệ.",
+};
+const noticeMessage = noticeMessages[notice];
+const getPlanText = (field) => field && typeof field === "object" ? (field.vi || field.en || field.jp || field.zh || "") : (field || "");
+const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.guests.length > 0 ? booking.guests.length : 1;
+%>
 <!DOCTYPE html>
-<html lang="<%= getLocale() %>">
+<html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= pageTitle %></title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-    // JS để chuyển Tab (Hàm vừa bị thiếu)
-    function openTab(tabName) {
-        // Ẩn tất cả nội dung tab
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        // Bỏ active ở tất cả nút
-        document.querySelectorAll('.tab-btn').forEach(el => {
-            el.classList.remove('border-blue-600', 'text-blue-600');
-            el.classList.add('border-transparent', 'text-gray-500');
-        });
-        
-        // Hiện tab được chọn
-        document.getElementById(tabName).classList.remove('hidden');
-        // Active nút được chọn
-        document.getElementById('btn-' + tabName).classList.add('border-blue-600', 'text-blue-600');
-        document.getElementById('btn-' + tabName).classList.remove('border-transparent', 'text-gray-500');
-    }
-
-    // JS để mở Modal sửa sản phẩm (Sử dụng data attributes)
-    document.addEventListener('DOMContentLoaded', function() {
-        // Bắt sự kiện click cho các nút có class 'btn-edit-product'
-        const editButtons = document.querySelectorAll('.btn-edit-product');
-        
-        editButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const id = this.getAttribute('data-id');
-                const title = this.getAttribute('data-title');
-                const price = this.getAttribute('data-price');
-                const original = this.getAttribute('data-original');
-                const imagesArray = this.getAttribute('data-images');
-                const desc = this.getAttribute('data-desc');
-                const tag = this.getAttribute('data-tag');
-                
-                // Lấy ảnh đầu tiên từ mảng (nếu có)
-                const image = imagesArray ? imagesArray.split(',')[0].trim() : '';
-
-                // Đổ dữ liệu vào Modal
-                document.getElementById('planId').value = id || '';
-                document.getElementById('planTitle').value = title || '';
-                document.getElementById('planPrice').value = price || '';
-                document.getElementById('planOriginal').value = original || '';
-                document.getElementById('planImage').value = image || '';
-                document.getElementById('planDesc').value = desc || '';
-                document.getElementById('planTag').value = tag || '';
-                
-                // Xử lý hiển thị ảnh cũ
-                const imgContainer = document.getElementById('currentImages');
-                imgContainer.innerHTML = ''; // Xóa ảnh cũ
-                
-                if (imagesArray) {
-                    const imgs = imagesArray.split(',');
-                    imgs.forEach(src => {
-                        if(src.trim()) {
-                            const img = document.createElement('img');
-                            img.src = src.trim();
-                            img.className = 'w-16 h-16 object-cover rounded border';
-                            imgContainer.appendChild(img);
-                        }
-                    });
-                }
-
-                document.getElementById('modalTitle').innerText = id ? 'Sửa Gói Dịch Vụ' : 'Thêm Gói Mới';
-                document.getElementById('productModal').classList.remove('hidden');
-            });
-        });
-
-        const initialTab = window.location.hash ? window.location.hash.replace('#', '') : '';
-        if (initialTab && document.getElementById(initialTab)) {
-            openTab(initialTab);
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= pageTitle %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: "#17211b",
+            moss: "#486154",
+            paper: "#f7f7f4",
+            line: "#e5e7e3",
+            brand: "#ba2636"
+          }
         }
-    });
-
-    // Hàm mở modal để Thêm gói mới
-    function openAddModal() {
-        document.getElementById('planId').value = '';
-        document.getElementById('planTitle').value = '';
-        document.getElementById('planPrice').value = '';
-        document.getElementById('planOriginal').value = '';
-        document.getElementById('planImage').value = '';
-        document.getElementById('planDesc').value = '';
-        document.getElementById('planTag').value = '';
-        document.getElementById('currentImages').innerHTML = '';
-        
-        document.getElementById('modalTitle').innerText = 'Thêm Gói Mới';
-        document.getElementById('productModal').classList.remove('hidden');
-    }
-
-    // Hàm đóng Modal
-    function closeModal() {
-        document.getElementById('productModal').classList.add('hidden');
-    }
-</script>
+      }
+    };
+  </script>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans">
+<body class="min-h-screen bg-paper text-ink antialiased">
+  <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-white lg:flex lg:flex-col">
+    <div class="flex h-20 items-center gap-3 border-b border-line px-6">
+      <img src="/img/common/logo.png" alt="Kokoro Kimono" class="h-9 w-9 rounded-lg object-contain">
+      <div>
+        <p class="font-semibold leading-5">Kokoro Kimono</p>
+        <p class="text-xs text-moss">Operations</p>
+      </div>
+    </div>
 
-    <header class="bg-white shadow-sm sticky top-0 z-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <div class="bg-blue-600 text-white p-2 rounded-lg font-bold">WR</div>
-                <h1 class="text-xl font-bold text-gray-900">Admin Dashboard</h1>
-            </div>
-            <div class="flex gap-4">
-                <a href="/" target="_blank" class="text-sm font-medium text-gray-500 hover:text-blue-600">Xem trang chủ ↗</a>
-                <a href="/logout" class="text-sm font-medium text-red-500 hover:text-red-700">Đăng xuất</a>
-            </div>
+    <nav class="flex-1 space-y-1 px-3 py-5" aria-label="Điều hướng quản trị">
+      <button type="button" data-tab-target="dashboard" class="admin-nav flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-moss hover:bg-stone-100">
+        <i data-lucide="layout-dashboard" class="h-4 w-4"></i><span>Tổng quan</span>
+      </button>
+      <button type="button" data-tab-target="bookings" class="admin-nav flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-moss hover:bg-stone-100">
+        <i data-lucide="calendar-days" class="h-4 w-4"></i><span>Lịch đặt</span>
+      </button>
+      <button type="button" data-tab-target="plans" class="admin-nav flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-moss hover:bg-stone-100">
+        <i data-lucide="shirt" class="h-4 w-4"></i><span>Gói dịch vụ</span>
+      </button>
+      <button type="button" data-tab-target="content" class="admin-nav flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-moss hover:bg-stone-100">
+        <i data-lucide="file-pen-line" class="h-4 w-4"></i><span>Nội dung</span>
+      </button>
+    </nav>
+
+    <div class="border-t border-line p-3">
+      <a href="/" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-moss hover:bg-stone-100">
+        <i data-lucide="external-link" class="h-4 w-4"></i><span>Mở website</span>
+      </a>
+      <a href="/logout" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-rose-700 hover:bg-rose-50">
+        <i data-lucide="log-out" class="h-4 w-4"></i><span>Đăng xuất</span>
+      </a>
+    </div>
+  </aside>
+
+  <div class="min-h-screen lg:pl-64">
+    <header class="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur">
+      <div class="flex h-16 items-center justify-between gap-4 px-4 sm:px-6">
+        <div>
+          <p class="text-xs font-medium text-moss">Kokoro Kimono</p>
         </div>
+        <div class="flex items-center gap-2">
+          <span class="hidden rounded-lg bg-stone-100 px-3 py-1.5 text-sm text-moss sm:inline"><%= dashboard.today %> · Tokyo</span>
+          <a href="/" target="_blank" rel="noopener" title="Mở website" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line text-moss hover:bg-stone-100 lg:hidden">
+            <i data-lucide="external-link" class="h-4 w-4"></i>
+          </a>
+          <a href="/logout" title="Đăng xuất" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line text-rose-700 hover:bg-rose-50 lg:hidden">
+            <i data-lucide="log-out" class="h-4 w-4"></i>
+          </a>
+        </div>
+      </div>
+      <nav class="flex gap-1 overflow-x-auto border-t border-line px-3 py-2 lg:hidden" aria-label="Điều hướng quản trị trên di động">
+        <button type="button" data-tab-target="dashboard" class="admin-nav shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-moss">Tổng quan</button>
+        <button type="button" data-tab-target="bookings" class="admin-nav shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-moss">Lịch đặt</button>
+        <button type="button" data-tab-target="plans" class="admin-nav shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-moss">Gói dịch vụ</button>
+        <button type="button" data-tab-target="content" class="admin-nav shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-moss">Nội dung</button>
+      </nav>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <div class="border-b border-gray-200 mb-8">
-            <nav class="-mb-px flex flex-wrap gap-4">
-                <button onclick="openTab('tab-orders')" id="btn-tab-orders" class="tab-btn border-blue-600 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                    📦 Quản lý Đơn hàng
-                </button>
-                <button onclick="openTab('tab-products')" id="btn-tab-products" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                    👘 Quản lý Sản phẩm
-                </button>
-                <button onclick="openTab('tab-blog')" id="btn-tab-blog" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                    📝 Quản lý Blog
-                </button>
-                <button onclick="openTab('tab-settings')" id="btn-tab-settings" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                    ⚙️ Cài đặt chung
-                </button>
-            </nav>
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <% if (noticeMessage) { %>
+        <div id="notice" class="mb-5 flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">
+          <span><%= noticeMessage %></span>
+          <button type="button" id="dismissNotice" title="Đóng thông báo" class="inline-flex h-7 w-7 items-center justify-center rounded text-emerald-800 hover:bg-emerald-100"><i data-lucide="x" class="h-4 w-4"></i></button>
+        </div>
+      <% } %>
+
+      <section id="tab-dashboard" class="admin-tab space-y-6">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p class="text-sm text-moss">Vận hành hôm nay</p>
+            <h2 class="text-2xl font-semibold">Tổng quan ngày <%= dashboard.today %></h2>
+          </div>
+          <button type="button" data-tab-target="bookings" class="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-800">
+            <i data-lucide="calendar-search" class="h-4 w-4"></i><span>Xem lịch đặt</span>
+          </button>
         </div>
 
-        <div id="tab-orders" class="tab-content">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div class="md:hidden p-4 space-y-4">
-                    <% bookings.forEach(item => { %>
-                        <div class="border border-gray-200 rounded-lg p-4 space-y-3">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <div class="font-bold text-gray-900"><%= item.fullname %></div>
-                                    <div class="text-xs text-gray-500"><%= item.phone %></div>
-                                </div>
-                                <span class="px-2 py-1 text-xs font-bold rounded bg-yellow-100 text-yellow-800"><%= item.status %></span>
-                            </div>
-                            <div class="text-sm">
-                                <div class="font-medium"><%= item.planName || 'Gói tùy chọn' %></div>
-                                <div class="text-xs text-green-600 font-bold">¥<%= item.totalPrice ? item.totalPrice.toLocaleString() : 0 %></div>
-                            </div>
-                            <div class="text-xs text-gray-500">
-                                <span>Ngày đến:</span> <%= item.date %> | <%= item.time %>
-                            </div>
-                            <form action="/admin/delete/<%= item._id %>" method="POST" onsubmit="return confirm('Xóa đơn này?')">
-                                <button class="w-full text-red-500 hover:text-red-700 text-xs font-bold border border-red-200 px-3 py-2 rounded">Xóa</button>
-                            </form>
-                        </div>
-                    <% }) %>
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <article class="border border-line border-t-4 border-t-brand bg-white p-5">
+            <div class="flex items-center justify-between text-sm text-moss"><span>Khách đến hôm nay</span><i data-lucide="users" class="h-4 w-4"></i></div>
+            <p class="mt-4 text-3xl font-semibold"><%= dashboard.todayGuests %></p>
+            <p class="mt-1 text-sm text-moss"><%= dashboard.activeTodayCount %> booking đang hoạt động</p>
+          </article>
+          <article class="border border-line border-t-4 border-t-amber-500 bg-white p-5">
+            <div class="flex items-center justify-between text-sm text-moss"><span>Cần xác nhận</span><i data-lucide="circle-alert" class="h-4 w-4"></i></div>
+            <p class="mt-4 text-3xl font-semibold"><%= dashboard.pendingCount %></p>
+            <p class="mt-1 text-sm text-moss">Từ hôm nay trở đi</p>
+          </article>
+          <article class="border border-line border-t-4 border-t-emerald-600 bg-white p-5">
+            <div class="flex items-center justify-between text-sm text-moss"><span>Doanh thu tháng</span><i data-lucide="banknote" class="h-4 w-4"></i></div>
+            <p class="mt-4 text-3xl font-semibold">¥<%= dashboard.monthRevenue.toLocaleString() %></p>
+            <p class="mt-1 text-sm text-moss">Booking chưa hủy</p>
+          </article>
+          <article class="border border-line border-t-4 border-t-violet-600 bg-white p-5">
+            <div class="flex items-center justify-between text-sm text-moss"><span>Lịch sắp tới</span><i data-lucide="calendar-clock" class="h-4 w-4"></i></div>
+            <p class="mt-4 text-3xl font-semibold"><%= dashboard.upcomingBookings.length %></p>
+            <p class="mt-1 text-sm text-moss">8 lịch gần nhất</p>
+          </article>
+        </div>
+
+        <div class="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+          <section class="border border-line bg-white">
+            <div class="flex items-center justify-between border-b border-line px-5 py-4">
+              <div>
+                <h3 class="font-semibold">Lịch hôm nay</h3>
+                <p class="mt-1 text-sm text-moss"><%= dashboard.todayBookings.length %> booking đã tạo</p>
+              </div>
+              <button type="button" data-tab-target="bookings" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-moss hover:bg-stone-100" title="Mở danh sách booking">
+                <i data-lucide="arrow-up-right" class="h-4 w-4"></i>
+              </button>
+            </div>
+            <% if (dashboard.todayBookings.length === 0) { %>
+              <div class="px-5 py-12 text-center text-sm text-moss">Chưa có booking nào cho hôm nay.</div>
+            <% } else { %>
+              <div class="divide-y divide-line">
+                <% dashboard.todayBookings.forEach(booking => { %>
+                  <% const statusClass = statusStyles[booking.status] || "bg-stone-100 text-stone-700 ring-stone-200"; %>
+                  <button type="button" data-booking-open data-booking-id="<%= booking._id %>" class="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-stone-50">
+                    <span class="w-12 shrink-0 text-sm font-semibold"><%= booking.time || "--:--" %></span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block truncate font-medium"><%= booking.fullname || "Khách chưa có tên" %></span>
+                      <span class="mt-0.5 block truncate text-xs text-moss"><%= getGuestCount(booking) %> khách · ¥<%= (Number(booking.totalPrice) || 0).toLocaleString() %></span>
+                    </span>
+                    <span class="hidden text-xs text-moss sm:block"><%= booking.bookingCode || `KK-${String(booking._id).slice(-6).toUpperCase()}` %></span>
+                    <span class="shrink-0 rounded px-2 py-1 text-xs font-medium ring-1 ring-inset <%= statusClass %>"><%= booking.status || "Mới" %></span>
+                  </button>
+                <% }) %>
+              </div>
+            <% } %>
+          </section>
+
+          <section class="border border-line bg-white">
+            <div class="border-b border-line px-5 py-4">
+              <h3 class="font-semibold">Việc cần xử lý</h3>
+              <p class="mt-1 text-sm text-moss">Các booking sắp tới</p>
+            </div>
+            <% if (dashboard.upcomingBookings.length === 0) { %>
+              <div class="px-5 py-12 text-center text-sm text-moss">Không có lịch sắp tới.</div>
+            <% } else { %>
+              <div class="divide-y divide-line">
+                <% dashboard.upcomingBookings.forEach(booking => { %>
+                  <% const needsConfirmation = booking.status === "Mới" || booking.status === "Đã đặt (Chờ đến)"; %>
+                  <button type="button" data-booking-open data-booking-id="<%= booking._id %>" class="block w-full px-5 py-4 text-left hover:bg-stone-50">
+                    <span class="flex items-center justify-between gap-3">
+                      <span class="font-medium"><%= booking.fullname || "Khách chưa có tên" %></span>
+                      <% if (needsConfirmation) { %><span class="text-xs font-medium text-amber-700">Cần xác nhận</span><% } %>
+                    </span>
+                    <span class="mt-1 block text-sm text-moss"><%= booking.date %> · <%= booking.time %> · <%= getGuestCount(booking) %> khách</span>
+                  </button>
+                <% }) %>
+              </div>
+            <% } %>
+          </section>
+        </div>
+      </section>
+
+      <section id="tab-bookings" class="admin-tab hidden space-y-5">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p class="text-sm text-moss"><%= filters.archived ? "Kho lưu trữ" : "Lịch làm việc" %></p>
+            <h2 class="text-2xl font-semibold"><%= filters.archived ? "Booking đã lưu trữ" : "Quản lý lịch đặt" %></h2>
+          </div>
+          <% if (filters.archived) { %>
+            <a href="/admin#tab-bookings" class="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink hover:bg-stone-100"><i data-lucide="arrow-left" class="h-4 w-4"></i><span>Danh sách vận hành</span></a>
+          <% } else { %>
+            <a href="/admin?archived=1#tab-bookings" class="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink hover:bg-stone-100"><i data-lucide="archive" class="h-4 w-4"></i><span>Kho lưu trữ</span></a>
+          <% } %>
+        </div>
+
+        <form action="/admin" method="GET" class="grid gap-3 border border-line bg-white p-4 lg:grid-cols-[minmax(0,1fr)_180px_170px_auto]">
+          <% if (filters.archived) { %><input type="hidden" name="archived" value="1"><% } %>
+          <div>
+            <label for="bookingSearch" class="sr-only">Tìm booking</label>
+            <div class="flex items-center gap-2 border border-line px-3 py-2.5 focus-within:border-moss">
+              <i data-lucide="search" class="h-4 w-4 text-moss"></i>
+              <input id="bookingSearch" name="q" value="<%= filters.q %>" placeholder="Tìm tên, điện thoại, email hoặc mã đơn" class="w-full bg-transparent text-sm outline-none placeholder:text-stone-400">
+            </div>
+          </div>
+          <div>
+            <label for="bookingStatus" class="sr-only">Trạng thái</label>
+            <select id="bookingStatus" name="status" class="h-full w-full border border-line bg-white px-3 text-sm outline-none focus:border-moss">
+              <option value="">Tất cả trạng thái</option>
+              <% bookingStatuses.forEach(status => { %>
+                <option value="<%= status %>" <%= filters.status === status ? "selected" : "" %>><%= status %></option>
+              <% }) %>
+              <option value="Đã đặt (Chờ đến)" <%= filters.status === "Đã đặt (Chờ đến)" ? "selected" : "" %>>Đã đặt (cũ)</option>
+            </select>
+          </div>
+          <div>
+            <label for="bookingDate" class="sr-only">Ngày đến</label>
+            <input id="bookingDate" type="date" name="date" value="<%= filters.date %>" class="h-full w-full border border-line bg-white px-3 text-sm outline-none focus:border-moss">
+          </div>
+          <div class="flex gap-2">
+            <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white hover:bg-black"><i data-lucide="filter" class="h-4 w-4"></i><span>Lọc</span></button>
+            <a href="/admin<%= filters.archived ? "?archived=1" : "" %>#tab-bookings" title="Xóa bộ lọc" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line text-moss hover:bg-stone-100"><i data-lucide="rotate-ccw" class="h-4 w-4"></i></a>
+          </div>
+        </form>
+
+        <section class="overflow-hidden border border-line bg-white">
+          <div class="flex items-center justify-between border-b border-line px-5 py-4">
+            <p class="text-sm text-moss">Hiển thị <span class="font-semibold text-ink"><%= bookings.length %></span> trên <span class="font-semibold text-ink"><%= pagination.totalItems %></span> booking</p>
+            <span class="text-xs text-moss">Bấm vào dòng để xem chi tiết</span>
+          </div>
+          <% if (bookings.length === 0) { %>
+            <div class="px-5 py-16 text-center">
+              <i data-lucide="calendar-x" class="mx-auto h-7 w-7 text-moss"></i>
+              <p class="mt-3 text-sm text-moss">Không có booking phù hợp.</p>
+            </div>
+          <% } else { %>
+            <div class="overflow-x-auto">
+              <table class="min-w-[900px] w-full text-left text-sm">
+                <thead class="bg-stone-50 text-xs uppercase text-moss">
+                  <tr>
+                    <th class="px-5 py-3 font-medium">Mã đơn</th>
+                    <th class="px-5 py-3 font-medium">Khách hàng</th>
+                    <th class="px-5 py-3 font-medium">Lịch đến</th>
+                    <th class="px-5 py-3 font-medium">Khách</th>
+                    <th class="px-5 py-3 font-medium">Tổng tiền</th>
+                    <th class="px-5 py-3 font-medium">Trạng thái</th>
+                    <th class="px-5 py-3 font-medium"><span class="sr-only">Mở chi tiết</span></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-line">
+                  <% bookings.forEach(booking => { %>
+                    <% const statusClass = statusStyles[booking.status] || "bg-stone-100 text-stone-700 ring-stone-200"; %>
+                    <tr class="group cursor-pointer hover:bg-stone-50" data-booking-open data-booking-id="<%= booking._id %>">
+                      <td class="whitespace-nowrap px-5 py-4 font-medium"><%= booking.bookingCode || `KK-${String(booking._id).slice(-6).toUpperCase()}` %></td>
+                      <td class="px-5 py-4"><span class="block font-medium"><%= booking.fullname || "Khách chưa có tên" %></span><span class="mt-1 block text-xs text-moss"><%= booking.phone || booking.email || "Không có liên hệ" %></span></td>
+                      <td class="whitespace-nowrap px-5 py-4"><span class="block font-medium"><%= booking.date || "--" %></span><span class="mt-1 block text-xs text-moss"><%= booking.time || "--:--" %></span></td>
+                      <td class="px-5 py-4"><%= getGuestCount(booking) %></td>
+                      <td class="px-5 py-4 font-medium">¥<%= (Number(booking.totalPrice) || 0).toLocaleString() %></td>
+                      <td class="px-5 py-4"><span class="inline-flex rounded px-2 py-1 text-xs font-medium ring-1 ring-inset <%= statusClass %>"><%= booking.status || "Mới" %></span></td>
+                      <td class="px-5 py-4 text-right"><button type="button" data-booking-open data-booking-id="<%= booking._id %>" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-moss hover:bg-stone-200" title="Xem chi tiết"><i data-lucide="chevron-right" class="h-4 w-4"></i></button></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+          <% if (pagination.totalPages > 1) { %>
+            <div class="flex items-center justify-between border-t border-line px-5 py-4">
+              <p class="text-sm text-moss">Trang <%= pagination.page %> / <%= pagination.totalPages %></p>
+              <div class="flex gap-2">
+                <% if (pagination.previousUrl) { %><a href="<%= pagination.previousUrl %>" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line text-moss hover:bg-stone-100" title="Trang trước"><i data-lucide="chevron-left" class="h-4 w-4"></i></a><% } %>
+                <% if (pagination.nextUrl) { %><a href="<%= pagination.nextUrl %>" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line text-moss hover:bg-stone-100" title="Trang sau"><i data-lucide="chevron-right" class="h-4 w-4"></i></a><% } %>
+              </div>
+            </div>
+          <% } %>
+        </section>
+      </section>
+
+      <section id="tab-plans" class="admin-tab hidden space-y-5">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div><p class="text-sm text-moss">Bán hàng</p><h2 class="text-2xl font-semibold">Gói dịch vụ</h2></div>
+          <button type="button" id="openAddPlan" class="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-800"><i data-lucide="plus" class="h-4 w-4"></i><span>Thêm gói</span></button>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <% plans.forEach(plan => { %>
+            <% const planTitle = getPlanText(plan.title); const planDesc = getPlanText(plan.desc); %>
+            <article class="flex min-h-[360px] flex-col overflow-hidden border border-line bg-white">
+              <img src="<%= plan.image || '/img/gallery/1.jpg' %>" alt="<%= planTitle %>" class="h-44 w-full object-cover" loading="lazy" decoding="async">
+              <div class="flex flex-1 flex-col p-5">
+                <div class="flex items-start justify-between gap-3"><h3 class="font-semibold"><%= planTitle %></h3><span class="shrink-0 rounded px-2 py-1 text-xs <%= plan.isVisible === false ? 'bg-stone-100 text-stone-600' : 'bg-emerald-50 text-emerald-700' %>"><%= plan.isVisible === false ? 'Ẩn' : 'Đang bán' %></span></div>
+                <p class="mt-3 text-2xl font-semibold text-brand">¥<%= (Number(plan.price) || 0).toLocaleString() %></p>
+                <% if (plan.originalPrice) { %><p class="mt-1 text-sm text-moss line-through">¥<%= Number(plan.originalPrice).toLocaleString() %></p><% } %>
+                <p class="mt-4 line-clamp-3 text-sm leading-6 text-moss"><%= planDesc %></p>
+                <div class="mt-auto flex items-center justify-between border-t border-line pt-4">
+                  <button type="button" data-plan-edit data-id="<%= plan._id %>" data-title="<%= planTitle %>" data-price="<%= plan.price || '' %>" data-original="<%= plan.originalPrice || '' %>" data-images="<%= plan.images ? plan.images.join(',') : '' %>" data-image="<%= plan.image || '' %>" data-desc="<%= planDesc %>" data-tag="<%= plan.tag || '' %>" data-visible="<%= plan.isVisible !== false %>" class="inline-flex items-center gap-2 text-sm font-semibold text-ink hover:text-brand"><i data-lucide="pencil" class="h-4 w-4"></i><span>Sửa</span></button>
+                  <form action="/admin/plan/delete/<%= plan._id %>" method="POST" onsubmit="return confirm('Xóa gói dịch vụ này?')"><input type="hidden" name="csrfToken" value="<%= csrfToken %>"><button class="inline-flex h-8 w-8 items-center justify-center rounded text-rose-700 hover:bg-rose-50" title="Xóa gói"><i data-lucide="trash-2" class="h-4 w-4"></i></button></form>
                 </div>
-                <div class="hidden md:block overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                                <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Khách hàng</th>
-                                <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Gói & Giá</th>
-                                <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Ngày đến</th>
-                                <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase text-center">Trạng thái</th>
-                                <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase text-right">Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            <% bookings.forEach(item => { %>
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-4">
-                                        <div class="font-bold text-gray-900"><%= item.fullname %></div>
-                                        <div class="text-xs text-gray-500"><%= item.phone %></div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <div class="text-sm font-medium"><%= item.planName || 'Gói tùy chọn' %></div>
-                                        <div class="text-xs text-green-600 font-bold">¥<%= item.totalPrice ? item.totalPrice.toLocaleString() : 0 %></div>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm">
-                                        <%= item.date %> <span class="text-gray-400">|</span> <%= item.time %>
-                                    </td>
-                                    <td class="px-6 py-4 text-center">
-                                        <span class="px-2 py-1 text-xs font-bold rounded bg-yellow-100 text-yellow-800"><%= item.status %></span>
-                                    </td>
-                                    <td class="px-6 py-4 text-right">
-                                        <form action="/admin/delete/<%= item._id %>" method="POST" onsubmit="return confirm('Xóa đơn này?')">
-                                            <button class="text-red-500 hover:text-red-700 text-xs font-bold border border-red-200 px-3 py-1 rounded">Xóa</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <% }) %>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+              </div>
+            </article>
+          <% }) %>
         </div>
+      </section>
 
-        <div id="tab-products" class="tab-content hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-lg font-bold text-gray-800">Danh sách gói dịch vụ</h3>
-                <button onclick="openAddModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow hover:bg-blue-700 transition">
-                + Thêm gói mới
-            </button>
-            </div>
-
-            <div class="grid md:grid-cols-3 gap-6">
-                <% plans.forEach(plan => { %>
-    <% const planDesc = plan.desc && typeof plan.desc === 'object' ? (plan.desc.vi || plan.desc.en || plan.desc.jp || plan.desc.zh || '') : (plan.desc || ''); %>
-    <% const planTitle = plan.title && typeof plan.title === 'object' ? (plan.title.vi || plan.title.en || plan.title.jp || plan.title.zh || '') : (plan.title || ''); %>
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-        <div class="h-40 w-full relative">
-            <img src="<%= plan.image %>" alt="admin kimono plan image" class="w-full h-full object-cover" loading="lazy" decoding="async">
-            <span class="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded"><%= plan.tag %></span>
-        </div>
-        <div class="p-4 flex-1">
-            <h4 class="font-bold text-lg mb-1"><%= planTitle %></h4>
-            <div class="flex gap-2 items-end mb-2">
-                <span class="text-red-600 font-bold text-xl">¥<%= plan.price.toLocaleString() %></span>
-                <span class="text-gray-400 line-through text-sm">¥<%= plan.originalPrice %></span>
-            </div>
-            <p class="text-gray-500 text-xs line-clamp-2"><%= planDesc %></p>
-        </div>
-        <div class="p-4 bg-gray-50 border-t flex justify-between">
-            <button 
-    class="btn-edit-product text-blue-600 font-bold text-sm hover:underline"
-    data-id="<%= plan._id %>"
-    data-title="<%= planTitle %>"
-    data-price="<%= plan.price %>"
-    data-original="<%= plan.originalPrice %>"
-    data-images="<%= plan.images ? plan.images.join(',') : '' %>"
-    data-desc="<%= planDesc %>"
-    data-tag="<%= plan.tag %>"
->
-    Chỉnh sửa
-</button>
-            
-            <form action="/admin/plan/delete/<%= plan._id %>" method="POST" onsubmit="return confirm('Xóa gói này?')">
-                <button class="text-red-600 font-bold text-sm hover:underline">Xóa</button>
+      <section id="tab-content" class="admin-tab hidden space-y-8">
+        <div><p class="text-sm text-moss">Website</p><h2 class="text-2xl font-semibold">Nội dung và hình ảnh</h2></div>
+        <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <section class="border border-line bg-white p-5 sm:p-6">
+            <div class="mb-5"><h3 class="font-semibold">Bài blog mới</h3><p class="mt-1 text-sm text-moss">Nội dung được tạo bản dịch cho bốn ngôn ngữ.</p></div>
+            <form action="/admin/blog/save" method="POST" enctype="multipart/form-data" class="space-y-4">
+              <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
+              <div><label for="blogTitle" class="mb-1.5 block text-sm font-medium">Tiêu đề</label><input id="blogTitle" type="text" name="title" required class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss" placeholder="Best Kimono Rental Near Kiyomizu Temple"></div>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div><label for="blogSlug" class="mb-1.5 block text-sm font-medium">Slug URL</label><input id="blogSlug" type="text" name="slug" class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss" placeholder="Tu dong tao neu bo trong"></div>
+                <div><label for="blogDate" class="mb-1.5 block text-sm font-medium">Ngày đăng</label><input id="blogDate" type="date" name="date" value="<%= new Date().toISOString().slice(0, 10) %>" class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss"></div>
+              </div>
+              <div><label for="blogExcerpt" class="mb-1.5 block text-sm font-medium">Mô tả ngắn</label><textarea id="blogExcerpt" name="excerpt" rows="3" required class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss"></textarea></div>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div><label for="blogThumbnail" class="mb-1.5 block text-sm font-medium">Thumbnail URL</label><input id="blogThumbnail" type="url" name="thumbnail" class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss" placeholder="https://..."></div>
+                <div><label for="blogThumbnailFile" class="mb-1.5 block text-sm font-medium">Upload thumbnail</label><input id="blogThumbnailFile" type="file" name="thumbnail_file" accept="image/*" class="w-full border border-line p-2 text-sm"></div>
+              </div>
+              <div><label for="blogKeywords" class="mb-1.5 block text-sm font-medium">Keywords</label><input id="blogKeywords" type="text" name="keywords" class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss" placeholder="kimono rental kyoto, kiyomizu"></div>
+              <div><label for="blogContent" class="mb-1.5 block text-sm font-medium">Nội dung</label><textarea id="blogContent" name="content" rows="13" required class="w-full border border-line px-3 py-2.5 font-mono text-sm outline-none focus:border-moss" placeholder="## Tiêu đề phần&#10;&#10;Nội dung đoạn đầu..."></textarea></div>
+              <div><label for="blogFaq" class="mb-1.5 block text-sm font-medium">FAQ</label><textarea id="blogFaq" name="faq" rows="4" class="w-full border border-line px-3 py-2.5 font-mono text-sm outline-none focus:border-moss" placeholder="Câu hỏi? | Câu trả lời."></textarea></div>
+              <label class="flex items-center gap-2 text-sm font-medium"><input type="checkbox" name="isPublished" checked class="h-4 w-4 accent-brand"><span>Xuất bản ngay</span></label>
+              <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white hover:bg-black"><i data-lucide="save" class="h-4 w-4"></i><span>Lưu bài blog</span></button>
             </form>
-        </div>
-    </div>
-<% }) %>
-            </div>
-        </div>
+          </section>
 
-        <div id="tab-blog" class="tab-content hidden">
-            <div class="grid lg:grid-cols-[1fr_0.9fr] gap-8 items-start">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h3 class="text-lg font-bold text-gray-800 mb-2">Thêm bài blog mới</h3>
-                    <p class="text-sm text-gray-500 mb-6">
-                        Nhập nội dung bằng tiếng Việt, tiếng Anh, tiếng Nhật hoặc tiếng Trung. Hệ thống sẽ tự tạo bản dịch cho 4 ngôn ngữ.
-                    </p>
-
-                    <form action="/admin/blog/save" method="POST" enctype="multipart/form-data" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tiêu đề</label>
-                            <input type="text" name="title" required class="w-full border border-gray-300 p-3 rounded-lg" placeholder="VD: Best Kimono Rental Near Kiyomizu Temple">
-                        </div>
-
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Slug URL</label>
-                                <input type="text" name="slug" class="w-full border border-gray-300 p-3 rounded-lg" placeholder="bo-trong-se-tu-tao">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ngày đăng</label>
-                                <input type="date" name="date" value="<%= new Date().toISOString().slice(0, 10) %>" class="w-full border border-gray-300 p-3 rounded-lg">
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Mô tả ngắn / Meta description</label>
-                            <textarea name="excerpt" rows="3" required class="w-full border border-gray-300 p-3 rounded-lg" placeholder="Tóm tắt ngắn để hiển thị trên listing và meta description."></textarea>
-                        </div>
-
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ảnh thumbnail URL</label>
-                                <input type="url" name="thumbnail" class="w-full border border-gray-300 p-3 rounded-lg" placeholder="https://... hoặc /img/gallery/1.jpg">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Upload thumbnail</label>
-                                <input type="file" name="thumbnail_file" accept="image/*" class="w-full border border-gray-300 p-2 rounded-lg bg-gray-50 text-sm">
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Keywords</label>
-                            <input type="text" name="keywords" class="w-full border border-gray-300 p-3 rounded-lg" placeholder="kimono rental kyoto, kimono photoshoot Kyoto">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nội dung bài viết</label>
-                            <textarea name="content" rows="14" required class="w-full border border-gray-300 p-3 rounded-lg font-mono text-sm" placeholder="Dùng ## để tạo H2.
-
-## Vì sao nên thuê kimono gần Kiyomizu
-Nội dung đoạn 1...
-
-Nội dung đoạn 2...
-
-## Lịch trình gợi ý
-Nội dung đoạn tiếp theo..."></textarea>
-                            <p class="text-xs text-gray-400 mt-1">Dòng bắt đầu bằng ## sẽ thành H2. Mỗi đoạn cách nhau bằng một dòng trống.</p>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">FAQ</label>
-                            <textarea name="faq" rows="5" class="w-full border border-gray-300 p-3 rounded-lg font-mono text-sm" placeholder="Mỗi dòng một câu hỏi:
-Thuê kimono mất bao lâu? | Thường khoảng 30-45 phút.
-Có thể thuê kimono đôi không? | Có, Kokoro hỗ trợ khách đi đôi."></textarea>
-                        </div>
-
-                        <label class="flex items-center gap-2 text-sm font-medium">
-                            <input type="checkbox" name="isPublished" checked class="w-4 h-4 accent-blue-600">
-                            Xuất bản ngay
-                        </label>
-
-                        <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700">
-                            Lưu bài blog
-                        </button>
-                    </form>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Bài blog đã thêm từ Admin</h3>
-
-                    <% if (!blogs || blogs.length === 0) { %>
-                        <div class="text-sm text-gray-500 bg-gray-50 border border-dashed rounded-lg p-6">
-                            Chưa có bài blog nào trong database. Website vẫn đang hiển thị 5 bài mẫu SEO.
-                        </div>
-                    <% } %>
-
-                    <div class="space-y-4">
-                        <% (blogs || []).forEach(blog => { %>
-                            <% const blogTitle = blog.title && typeof blog.title === 'object' ? (blog.title.vi || blog.title.en || blog.title.jp || blog.title.zh || '') : (blog.title || ''); %>
-                            <% const blogExcerpt = blog.excerpt && typeof blog.excerpt === 'object' ? (blog.excerpt.vi || blog.excerpt.en || blog.excerpt.jp || blog.excerpt.zh || '') : (blog.excerpt || ''); %>
-                            <article class="border border-gray-200 rounded-lg overflow-hidden">
-                                <div class="flex gap-4 p-4">
-                                    <img src="<%= blog.thumbnail || '/img/gallery/1.jpg' %>" alt="admin blog thumbnail" class="w-24 h-24 object-cover rounded-lg shrink-0">
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span class="text-xs px-2 py-1 rounded <%= blog.isPublished ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' %>">
-                                                <%= blog.isPublished ? 'Published' : 'Draft' %>
-                                            </span>
-                                            <time class="text-xs text-gray-400"><%= blog.date %></time>
-                                        </div>
-                                        <h4 class="font-bold text-gray-900 line-clamp-2"><%= blogTitle %></h4>
-                                        <p class="text-xs text-gray-500 mt-1">/<%= blog.slug %></p>
-                                        <p class="text-sm text-gray-600 line-clamp-2 mt-2"><%= blogExcerpt %></p>
-                                    </div>
-                                </div>
-                                <div class="px-4 py-3 bg-gray-50 border-t flex items-center justify-between gap-3">
-                                    <a href="/blog/<%= blog.slug %>" target="_blank" class="text-blue-600 text-sm font-bold hover:underline">Xem bài viết</a>
-                                    <form action="/admin/blog/delete/<%= blog._id %>" method="POST" onsubmit="return confirm('Xóa bài blog này?')">
-                                        <button class="text-red-600 text-sm font-bold hover:underline">Xóa</button>
-                                    </form>
-                                </div>
-                            </article>
-                        <% }) %>
-                    </div>
-                </div>
-            </div>
+          <section class="border border-line bg-white">
+            <div class="border-b border-line px-5 py-4"><h3 class="font-semibold">Bài blog từ Admin</h3><p class="mt-1 text-sm text-moss"><%= blogs.length %> bài trong database</p></div>
+            <% if (!blogs || blogs.length === 0) { %>
+              <div class="px-5 py-12 text-center text-sm text-moss">Chưa có bài blog nào từ Admin.</div>
+            <% } else { %>
+              <div class="divide-y divide-line">
+                <% blogs.forEach(blog => { %>
+                  <% const blogTitle = getPlanText(blog.title); const blogExcerpt = getPlanText(blog.excerpt); %>
+                  <article class="flex gap-4 p-5">
+                    <img src="<%= blog.thumbnail || '/img/gallery/1.jpg' %>" alt="" class="h-20 w-20 shrink-0 object-cover" loading="lazy" decoding="async">
+                    <div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-3"><span class="rounded px-2 py-1 text-xs <%= blog.isPublished ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600' %>"><%= blog.isPublished ? 'Đã đăng' : 'Bản nháp' %></span><span class="text-xs text-moss"><%= blog.date %></span></div><h4 class="mt-2 line-clamp-2 font-semibold"><%= blogTitle %></h4><p class="mt-1 line-clamp-2 text-sm text-moss"><%= blogExcerpt %></p><div class="mt-3 flex items-center justify-between"><a href="/blog/<%= blog.slug %>" target="_blank" rel="noopener" class="text-sm font-semibold text-brand hover:text-rose-800">Xem bài</a><form action="/admin/blog/delete/<%= blog._id %>" method="POST" onsubmit="return confirm('Xóa bài blog này?')"><input type="hidden" name="csrfToken" value="<%= csrfToken %>"><button title="Xóa bài blog" class="inline-flex h-8 w-8 items-center justify-center rounded text-rose-700 hover:bg-rose-50"><i data-lucide="trash-2" class="h-4 w-4"></i></button></form></div></div>
+                  </article>
+                <% }) %>
+              </div>
+            <% } %>
+          </section>
         </div>
 
-        <div id="tab-settings" class="tab-content hidden">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-2xl">
-                <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2">
-                    <span>🖼️</span> Ảnh nền trang chủ (Hero Image)
-                </h3>
-
-                <form action="/admin/config/save" method="POST" enctype="multipart/form-data">
-        
-                    <div class="mb-4">
-                        <p class="text-xs text-gray-400 mb-2">Ảnh đang hiển thị (Bỏ tick để xóa):</p>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <% 
-                            // Logic xử lý hiển thị ảnh trong Admin (tương tự server.js)
-                            let currentHeroes = [];
-                            if (heroImage) { // heroImage được truyền từ server.js (dòng cũ)
-                                if (Array.isArray(heroImage)) currentHeroes = heroImage;
-                                else if (typeof heroImage === 'string' && heroImage.startsWith('[')) {
-                                    try { currentHeroes = JSON.parse(heroImage); } catch(e) {}
-                                } else { currentHeroes = [heroImage]; }
-                            }
-                            %>
-
-                            <% currentHeroes.forEach((img, index) => { %>
-                                <div class="relative group border rounded-lg overflow-hidden">
-                                    <img src="<%= img %>" alt="admin uploaded kimono image" class="w-full h-24 object-cover" loading="lazy" decoding="async">
-                                    <div class="absolute top-1 right-1">
-                                        <input type="checkbox" name="hero_images_old" value="<%= img %>" checked 
-                                            class="w-5 h-5 accent-red-500 cursor-pointer shadow-sm">
-                                    </div>
-                                </div>
-                            <% }) %>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-sm font-bold text-gray-700 mb-2">Thêm ảnh mới (Chọn nhiều)</label>
-                        <input type="file" name="hero_photos" multiple accept="image/*" 
-                            class="block w-full text-sm text-gray-500 border rounded-lg p-2
-                                    file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
-                                    file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                    </div>
-
-                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-lg transition">
-                        Lưu Cấu Hình
-                    </button>
-                </form>
-
-            </div>
-        </div>
-
+        <section class="max-w-3xl border border-line bg-white p-5 sm:p-6">
+          <div class="mb-5"><h3 class="font-semibold">Ảnh hero trang chủ</h3><p class="mt-1 text-sm text-moss">Các ảnh đang dùng trên trang chủ.</p></div>
+          <form action="/admin/config/save" method="POST" enctype="multipart/form-data" class="space-y-5">
+            <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
+            <%
+              let currentHeroes = [];
+              if (heroImage) {
+                if (Array.isArray(heroImage)) currentHeroes = heroImage;
+                else if (typeof heroImage === "string" && heroImage.startsWith("[")) { try { currentHeroes = JSON.parse(heroImage); } catch (error) {} }
+                else currentHeroes = [heroImage];
+              }
+            %>
+            <% if (currentHeroes.length > 0) { %>
+              <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <% currentHeroes.forEach(img => { %>
+                  <label class="relative block overflow-hidden border border-line bg-stone-50"><img src="<%= img %>" alt="Ảnh hero" class="h-28 w-full object-cover" loading="lazy" decoding="async"><span class="absolute right-2 top-2 rounded bg-white px-2 py-1 text-xs font-medium shadow-sm"><input type="checkbox" name="hero_images_old" value="<%= img %>" checked class="mr-1 accent-brand">Giữ</span></label>
+                <% }) %>
+              </div>
+            <% } %>
+            <div><label for="heroPhotos" class="mb-1.5 block text-sm font-medium">Thêm ảnh mới</label><input id="heroPhotos" type="file" name="hero_photos" multiple accept="image/*" class="w-full border border-line p-2 text-sm"></div>
+            <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white hover:bg-black"><i data-lucide="save" class="h-4 w-4"></i><span>Lưu ảnh hero</span></button>
+          </form>
+        </section>
+      </section>
     </main>
+  </div>
 
-    <div id="productModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl transform transition-all">
-            <div class="px-6 py-4 border-b bg-gray-50 flex justify-between items-center">
-                <h3 id="modalTitle" class="font-bold text-lg">Thêm Gói Mới</h3>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-            
-            <form action="/admin/plan/save" method="POST" class="p-6 space-y-4" enctype="multipart/form-data">
-                <input type="hidden" name="id" id="planId">
-                <input type="hidden" name="image" id="planImage"> 
-                <input type="hidden" name="imagesString" id="planImagesString">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tên gói</label>
-                    <input type="text" name="title" id="planTitle" required class="w-full border p-2 rounded">
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Giá bán (¥)</label>
-                        <input type="number" name="price" id="planPrice" required class="w-full border p-2 rounded">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Giá gốc (¥)</label>
-                        <input type="number" name="originalPrice" id="planOriginal" class="w-full border p-2 rounded">
-                    </div>
-                </div>
+  <div id="bookingDrawer" class="fixed inset-0 z-50 hidden bg-black/30" aria-hidden="true">
+    <aside class="ml-auto flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
+      <div class="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+        <div><p id="bookingDrawerCode" class="text-xs font-medium text-moss"></p><h2 id="bookingDrawerTitle" class="mt-1 text-lg font-semibold">Chi tiết booking</h2></div>
+        <button type="button" id="closeBookingDrawer" title="Đóng chi tiết booking" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-moss hover:bg-stone-100"><i data-lucide="x" class="h-5 w-5"></i></button>
+      </div>
+      <div id="bookingDrawerContent" class="flex-1 overflow-y-auto p-5"></div>
+    </aside>
+  </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">
-                        Chọn ảnh sản phẩm (Có thể chọn nhiều)
-                    </label>
-                    <input type="file" name="photos" multiple accept="image/*" 
-                        class="w-full border p-2 rounded bg-gray-50 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                    <p class="text-xs text-gray-400 mt-1">Chọn file từ máy tính. Ảnh đầu tiên sẽ làm ảnh đại diện.</p>
-                    
-                    <div id="currentImages" class="flex gap-2 mt-2 overflow-x-auto"></div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tag (Nhãn)</label>
-                    <input type="text" name="tag" id="planTag" class="w-full border p-2 rounded" placeholder="VD: Bán chạy nhất">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Mô tả ngắn</label>
-                    <textarea name="desc" id="planDesc" rows="3" class="w-full border p-2 rounded"></textarea>
-                </div>
-
-                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700">Lưu Sản Phẩm</button>
-            </form>
-        </div>
+  <div id="productModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4" aria-hidden="true">
+    <div class="max-h-full w-full max-w-xl overflow-y-auto bg-white shadow-2xl">
+      <div class="flex items-center justify-between border-b border-line px-5 py-4"><h2 id="planModalTitle" class="font-semibold">Thêm gói dịch vụ</h2><button type="button" id="closePlanModal" title="Đóng" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-moss hover:bg-stone-100"><i data-lucide="x" class="h-5 w-5"></i></button></div>
+      <form action="/admin/plan/save" method="POST" enctype="multipart/form-data" class="space-y-4 p-5">
+        <input type="hidden" name="csrfToken" value="<%= csrfToken %>">
+        <input type="hidden" name="id" id="planId"><input type="hidden" name="image" id="planImage"><input type="hidden" name="imagesString" id="planImagesString">
+        <div><label for="planTitle" class="mb-1.5 block text-sm font-medium">Tên gói</label><input id="planTitle" type="text" name="title" required class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss"></div>
+        <div class="grid grid-cols-2 gap-4"><div><label for="planPrice" class="mb-1.5 block text-sm font-medium">Giá bán (¥)</label><input id="planPrice" type="number" name="price" min="0" required class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss"></div><div><label for="planOriginal" class="mb-1.5 block text-sm font-medium">Giá gốc (¥)</label><input id="planOriginal" type="number" name="originalPrice" min="0" class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss"></div></div>
+        <div><label for="planPhotos" class="mb-1.5 block text-sm font-medium">Ảnh gói dịch vụ</label><input id="planPhotos" type="file" name="photos" multiple accept="image/*" class="w-full border border-line p-2 text-sm"><div id="currentImages" class="mt-3 flex gap-2 overflow-x-auto"></div></div>
+        <div><label for="planTag" class="mb-1.5 block text-sm font-medium">Nhãn</label><input id="planTag" type="text" name="tag" class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss" placeholder="Bán chạy"></div>
+        <div><label for="planDesc" class="mb-1.5 block text-sm font-medium">Mô tả ngắn</label><textarea id="planDesc" name="desc" rows="3" class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss"></textarea></div>
+        <label class="flex items-center gap-2 text-sm font-medium"><input id="planVisible" type="checkbox" name="isVisible" checked class="h-4 w-4 accent-brand"><span>Hiển thị trên website</span></label>
+        <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-800"><i data-lucide="save" class="h-4 w-4"></i><span>Lưu gói dịch vụ</span></button>
+      </form>
     </div>
+  </div>
 
+  <script>
+    const bookingData = <%- bookingDataJson %>;
+    const bookingStatuses = <%- bookingStatusesJson %>;
+    const csrfToken = "<%= csrfToken %>";
+    const bookingById = new Map(bookingData.map((booking) => [booking.id, booking]));
+    const defaultAdminTab = "<%= defaultAdminTab %>";
+    const statusClasses = {
+      "Mới": "bg-amber-50 text-amber-800 ring-amber-200",
+      "Đã đặt (Chờ đến)": "bg-amber-50 text-amber-800 ring-amber-200",
+      "Đã xác nhận": "bg-blue-50 text-blue-800 ring-blue-200",
+      "Đã đến": "bg-violet-50 text-violet-800 ring-violet-200",
+      "Hoàn tất": "bg-emerald-50 text-emerald-800 ring-emerald-200",
+      "Đã hủy": "bg-rose-50 text-rose-800 ring-rose-200"
+    };
+
+    const escapeHtml = (value) => String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+    const localizedValue = (value) => {
+      if (value && typeof value === "object") return value.vi || value.en || value.jp || value.zh || "";
+      return value || "";
+    };
+
+    const formatCurrency = (value) => `¥${Number(value || 0).toLocaleString()}`;
+
+    const setActiveTab = (tabName, updateHash = true) => {
+      document.querySelectorAll(".admin-tab").forEach((tab) => tab.classList.add("hidden"));
+      const target = document.getElementById(`tab-${tabName}`);
+      if (!target) return;
+      target.classList.remove("hidden");
+      document.querySelectorAll(".admin-nav").forEach((button) => {
+        const isActive = button.dataset.tabTarget === tabName;
+        button.classList.toggle("bg-ink", isActive);
+        button.classList.toggle("text-white", isActive);
+        button.classList.toggle("text-moss", !isActive);
+      });
+      if (updateHash) window.history.replaceState(null, "", `#tab-${tabName}`);
+    };
+
+    const closeBookingDrawer = () => {
+      const drawer = document.getElementById("bookingDrawer");
+      drawer.classList.add("hidden");
+      drawer.setAttribute("aria-hidden", "true");
+    };
+
+    const openBookingDrawer = (bookingId) => {
+      const booking = bookingById.get(bookingId);
+      if (!booking) return;
+      const drawer = document.getElementById("bookingDrawer");
+      const statusClass = statusClasses[booking.status] || "bg-stone-100 text-stone-700 ring-stone-200";
+      const guests = booking.guests && booking.guests.length
+        ? booking.guests.map((guest, index) => `<li class="flex items-start justify-between gap-3 border-b border-line py-3 last:border-0"><span><span class="block font-medium">${escapeHtml(localizedValue(guest.planName) || `Khách ${index + 1}`)}</span><span class="mt-1 block text-xs text-moss">${escapeHtml((guest.selectedOptions || []).join(", ") || "Không có tùy chọn thêm")}</span></span><span class="shrink-0 font-medium">${formatCurrency(guest.price)}</span></li>`).join("")
+        : `<li class="py-3 text-sm text-moss">Chưa có chi tiết từng khách.</li>`;
+      const history = booking.statusHistory && booking.statusHistory.length
+        ? [...booking.statusHistory].reverse().map((item) => `<li class="border-l-2 border-line pl-3 pb-4 last:pb-0"><p class="text-sm font-medium">${escapeHtml(item.from ? `${item.from} → ${item.to}` : item.to)}</p>${item.note ? `<p class="mt-1 text-sm text-moss">${escapeHtml(item.note)}</p>` : ""}<p class="mt-1 text-xs text-moss">${escapeHtml(item.changedBy || "System")} · ${item.createdAt ? new Date(item.createdAt).toLocaleString("vi-VN") : ""}</p></li>`).join("")
+        : `<li class="border-l-2 border-line pl-3 text-sm"><p class="font-medium">Booking được tạo</p><p class="mt-1 text-xs text-moss">${booking.createdAt ? new Date(booking.createdAt).toLocaleString("vi-VN") : "Không có thời điểm tạo"}</p></li>`;
+      const notes = booking.notes && booking.notes.length
+        ? [...booking.notes].reverse().map((item) => `<li class="border-b border-line py-3 last:border-0"><p class="text-sm leading-6">${escapeHtml(item.content)}</p><p class="mt-1 text-xs text-moss">${escapeHtml(item.createdBy || "Admin")} · ${item.createdAt ? new Date(item.createdAt).toLocaleString("vi-VN") : ""}</p></li>`).join("")
+        : `<li class="py-3 text-sm text-moss">Chưa có ghi chú nội bộ.</li>`;
+      const statusOptions = bookingStatuses.map((status) => `<option value="${escapeHtml(status)}" ${booking.status === status ? "selected" : ""}>${escapeHtml(status)}</option>`).join("");
+      const contactLinks = [
+        booking.phone ? `<a href="tel:${encodeURIComponent(booking.phone)}" class="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-rose-800"><i data-lucide="phone" class="h-4 w-4"></i><span>${escapeHtml(booking.phone)}</span></a>` : "",
+        booking.email ? `<a href="mailto:${encodeURIComponent(booking.email)}" class="inline-flex items-center gap-2 break-all text-sm font-semibold text-brand hover:text-rose-800"><i data-lucide="mail" class="h-4 w-4"></i><span>${escapeHtml(booking.email)}</span></a>` : ""
+      ].filter(Boolean).join("");
+
+      document.getElementById("bookingDrawerCode").textContent = booking.bookingCode;
+      document.getElementById("bookingDrawerTitle").textContent = booking.fullname;
+      document.getElementById("bookingDrawerContent").innerHTML = `
+        <div class="space-y-7">
+          <section class="border border-line p-4">
+            <div class="flex items-start justify-between gap-4"><div><p class="text-xs text-moss">Lịch đến</p><p class="mt-1 font-semibold">${escapeHtml(booking.date)} · ${escapeHtml(booking.time || "--:--")}</p><p class="mt-1 text-sm text-moss">${escapeHtml(booking.shopName)}</p><p class="mt-2 text-xs text-moss">Tạo lúc ${booking.createdAt ? new Date(booking.createdAt).toLocaleString("vi-VN") : "--"}</p></div><span class="shrink-0 rounded px-2 py-1 text-xs font-medium ring-1 ring-inset ${statusClass}">${escapeHtml(booking.status)}</span></div>
+            <div class="mt-4 flex flex-wrap gap-x-5 gap-y-2">${contactLinks || '<span class="text-sm text-moss">Chưa có thông tin liên hệ.</span>'}</div>
+          </section>
+          <section><div class="mb-3 flex items-center justify-between"><h3 class="font-semibold">Chi tiết dịch vụ</h3><span class="text-sm font-semibold">${formatCurrency(booking.totalPrice)}</span></div><ul class="border-y border-line">${guests}</ul></section>
+          ${booking.archivedAt ? `<section class="border border-amber-200 bg-amber-50 p-4"><p class="text-sm font-medium text-amber-900">Booking này đang được lưu trữ.</p><form action="/admin/booking/${booking.id}/restore" method="POST" class="mt-3"><input type="hidden" name="csrfToken" value="${csrfToken}"><button class="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-amber-900 ring-1 ring-inset ring-amber-300 hover:bg-amber-100"><i data-lucide="rotate-ccw" class="h-4 w-4"></i><span>Khôi phục booking</span></button></form></section>` : `<section class="border border-line p-4"><h3 class="font-semibold">Cập nhật trạng thái</h3><form action="/admin/update/${booking.id}" method="POST" class="mt-3 space-y-3"><input type="hidden" name="csrfToken" value="${csrfToken}"><select name="status" class="w-full border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-moss">${statusOptions}</select><textarea name="note" rows="2" maxlength="1000" class="w-full border border-line px-3 py-2.5 text-sm outline-none focus:border-moss" placeholder="Ghi lại lý do hoặc thông tin bàn giao"></textarea><button class="inline-flex items-center gap-2 rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-black"><i data-lucide="check" class="h-4 w-4"></i><span>Lưu trạng thái</span></button></form><form action="/admin/delete/${booking.id}" method="POST" onsubmit="return confirm('Lưu trữ booking này?')" class="mt-3"><input type="hidden" name="csrfToken" value="${csrfToken}"><button class="inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-rose-700 hover:bg-rose-50 px-3 py-2"><i data-lucide="archive" class="h-4 w-4"></i><span>Lưu trữ booking</span></button></form></section>`}
+          <section><h3 class="font-semibold">Ghi chú nội bộ</h3><ul class="mt-3 border-y border-line">${notes}</ul><form action="/admin/booking/${booking.id}/note" method="POST" class="mt-3 flex gap-2"><input type="hidden" name="csrfToken" value="${csrfToken}"><label class="sr-only" for="bookingNote">Ghi chú nội bộ</label><input id="bookingNote" type="text" name="note" maxlength="1000" required class="min-w-0 flex-1 border border-line px-3 py-2.5 text-sm outline-none focus:border-moss" placeholder="Thêm ghi chú"><button title="Lưu ghi chú" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-ink text-white hover:bg-black"><i data-lucide="plus" class="h-4 w-4"></i></button></form></section>
+          <section><h3 class="font-semibold">Lịch sử trạng thái</h3><ol class="mt-4">${history}</ol></section>
+        </div>`;
+      drawer.classList.remove("hidden");
+      drawer.setAttribute("aria-hidden", "false");
+      if (window.lucide) window.lucide.createIcons();
+    };
+
+    const closePlanModal = () => document.getElementById("productModal").classList.add("hidden");
+    const openPlanModal = (data = null) => {
+      document.getElementById("planId").value = data ? data.id : "";
+      document.getElementById("planTitle").value = data ? data.title : "";
+      document.getElementById("planPrice").value = data ? data.price : "";
+      document.getElementById("planOriginal").value = data ? data.original : "";
+      document.getElementById("planImage").value = data ? data.image : "";
+      document.getElementById("planImagesString").value = "";
+      document.getElementById("planDesc").value = data ? data.desc : "";
+      document.getElementById("planTag").value = data ? data.tag : "";
+      document.getElementById("planVisible").checked = !data || data.visible !== "false";
+      document.getElementById("planModalTitle").textContent = data ? "Sửa gói dịch vụ" : "Thêm gói dịch vụ";
+      const imageContainer = document.getElementById("currentImages");
+      imageContainer.innerHTML = "";
+      if (data) {
+        const images = data.images ? data.images.split(",").filter(Boolean) : (data.image ? [data.image] : []);
+        images.forEach((src) => {
+          const image = document.createElement("img");
+          image.src = src;
+          image.alt = "Ảnh gói hiện tại";
+          image.className = "h-16 w-16 shrink-0 border border-line object-cover";
+          imageContainer.appendChild(image);
+        });
+      }
+      document.getElementById("productModal").classList.remove("hidden");
+    };
+
+    document.querySelectorAll("[data-tab-target]").forEach((button) => button.addEventListener("click", () => setActiveTab(button.dataset.tabTarget)));
+    document.querySelectorAll("[data-booking-open]").forEach((element) => element.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openBookingDrawer(element.dataset.bookingId);
+    }));
+    document.getElementById("closeBookingDrawer").addEventListener("click", closeBookingDrawer);
+    document.getElementById("bookingDrawer").addEventListener("click", (event) => { if (event.target.id === "bookingDrawer") closeBookingDrawer(); });
+    document.getElementById("openAddPlan").addEventListener("click", () => openPlanModal());
+    document.getElementById("closePlanModal").addEventListener("click", closePlanModal);
+    document.getElementById("productModal").addEventListener("click", (event) => { if (event.target.id === "productModal") closePlanModal(); });
+    document.querySelectorAll("[data-plan-edit]").forEach((button) => button.addEventListener("click", () => openPlanModal(button.dataset)));
+    const dismissNotice = document.getElementById("dismissNotice");
+    if (dismissNotice) dismissNotice.addEventListener("click", () => document.getElementById("notice").remove());
+    document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeBookingDrawer(); closePlanModal(); } });
+    const hashTab = window.location.hash.replace("#tab-", "");
+    setActiveTab(document.getElementById(`tab-${hashTab}`) ? hashTab : defaultAdminTab, false);
+    if (window.lucide) window.lucide.createIcons();
+  </script>
 </body>
 </html>

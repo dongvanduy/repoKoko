@@ -11,6 +11,7 @@ const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
 const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 
 // Import Models
 const Booking = require("./models/booking");
@@ -660,6 +661,73 @@ const normalizeEnv = (value) => {
   return value.trim();
 };
 
+const BOOKING_STATUSES = [
+  "Mới",
+  "Đã xác nhận",
+  "Đã đến",
+  "Hoàn tất",
+  "Đã hủy",
+];
+
+const LEGACY_BOOKING_STATUS = "Đã đặt (Chờ đến)";
+const ACTIVE_BOOKING_STATUSES = [
+  "Mới",
+  LEGACY_BOOKING_STATUS,
+  "Đã xác nhận",
+  "Đã đến",
+];
+
+const getTokyoDate = () =>
+  new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
+
+const getBookingGuestCount = (booking) =>
+  Array.isArray(booking.guests) && booking.guests.length > 0
+    ? booking.guests.length
+    : 1;
+
+const createBookingCode = () => {
+  const day = getTokyoDate().replaceAll("-", "").slice(2);
+  const token = crypto.randomBytes(3).toString("hex").toUpperCase();
+  return `KK-${day}-${token}`;
+};
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const getAdminBookingFilter = (query = {}) => {
+  const filter =
+    query.archived === "1" ? { archivedAt: { $ne: null } } : { archivedAt: null };
+  const status = normalizeEnv(query.status);
+  const date = normalizeEnv(query.date);
+  const search = normalizeEnv(query.q);
+
+  if (BOOKING_STATUSES.includes(status) || status === LEGACY_BOOKING_STATUS) {
+    filter.status = status;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    filter.date = date;
+  }
+
+  if (search) {
+    const pattern = new RegExp(escapeRegex(search), "i");
+    filter.$or = [
+      { fullname: pattern },
+      { email: pattern },
+      { phone: pattern },
+      { bookingCode: pattern },
+    ];
+  }
+
+  return filter;
+};
+
+const adminRedirect = (notice, tab = "bookings") => {
+  const params = new URLSearchParams();
+  if (notice) params.set("notice", notice);
+  const query = params.toString();
+  return `/admin${query ? `?${query}` : ""}#tab-${tab}`;
+};
+
 const parseSecureFlag = (value) => {
   const normalized = normalizeEnv(value).toLowerCase();
   return normalized === "true" || normalized === "1" || normalized === "yes";
@@ -1002,6 +1070,29 @@ const requireLogin = (req, res, next) => {
   }
 };
 
+const getAdminCsrfToken = (req) => {
+  if (!req.session.adminCsrfToken) {
+    req.session.adminCsrfToken = crypto.randomBytes(32).toString("hex");
+  }
+  return req.session.adminCsrfToken;
+};
+
+const requireAdminCsrf = (req, res, next) => {
+  const expected = req.session.adminCsrfToken;
+  const received = normalizeEnv(req.body.csrfToken);
+  if (!expected || !received) return res.status(403).send("Yêu cầu không hợp lệ.");
+
+  const expectedBuffer = Buffer.from(expected);
+  const receivedBuffer = Buffer.from(received);
+  if (
+    expectedBuffer.length !== receivedBuffer.length ||
+    !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)
+  ) {
+    return res.status(403).send("Yêu cầu không hợp lệ.");
+  }
+  next();
+};
+
 // --- ROUTES ---
 
 // 1. Trang chủ
@@ -1313,7 +1404,15 @@ app.post("/booking", async (req, res) => {
       time,
       totalPrice,
       guests,
-      status: "Đã đặt (Chờ đến)",
+      bookingCode: createBookingCode(),
+      status: "Mới",
+      statusHistory: [
+        {
+          to: "Mới",
+          note: "Đơn được tạo từ website.",
+          changedBy: "Website",
+        },
+      ],
     });
 
     await newBooking.save();
@@ -1402,13 +1501,18 @@ app.get("/api/available-slots", async (req, res) => {
     const targetQty = parseInt(totalQuantity) || 1;
 
     // Tìm tất cả đơn hàng trong ngày tại shop đó
-    const bookings = await Booking.find({ date: date, shopId: shopId });
+    const bookings = await Booking.find({
+      date,
+      shopId,
+      archivedAt: null,
+      status: { $in: ACTIVE_BOOKING_STATUSES },
+    });
 
     const results = timeSlots.map((slot) => {
       // Tính tổng số khách đã đặt vào khung giờ này
       const bookedCount = bookings
         .filter((b) => b.time === slot.time)
-        .reduce((sum, b) => sum + (b.guests ? b.guests.length : 0), 0);
+        .reduce((sum, b) => sum + getBookingGuestCount(b), 0);
 
       const remaining = slot.maxGuests - bookedCount;
       return {
@@ -1505,7 +1609,15 @@ app.post("/booking-finish", async (req, res) => {
       time,
       totalPrice: finalTotal,
       guests: guests,
-      status: "Đã đặt (Chờ đến)",
+      bookingCode: createBookingCode(),
+      status: "Mới",
+      statusHistory: [
+        {
+          to: "Mới",
+          note: "Đơn được tạo từ website.",
+          changedBy: "Website",
+        },
+      ],
       language: req.getLocale(), // 👈 THÊM DÒNG NÀY ĐỂ LƯU NGÔN NGỮ
     });
 
@@ -1565,20 +1677,150 @@ app.get("/logout", (req, res) => {
 
 app.get("/admin", requireLogin, async (req, res) => {
   try {
-    const bookings = await Booking.find().sort({ createdAt: -1 });
-    const plans = await Plan.find();
-    const heroConfig = await Config.findOne({ key: "hero_image" });
-    const blogs = await getAdminBlogPosts();
+    const today = getTokyoDate();
+    const monthStart = `${today.slice(0, 7)}-01`;
+    const bookingFilter = getAdminBookingFilter(req.query);
+    const requestedPage = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const bookingPageSize = 50;
+    const activeFilter = {
+      archivedAt: null,
+      status: { $in: ACTIVE_BOOKING_STATUSES },
+    };
+    const pendingFilter = {
+      ...activeFilter,
+      date: { $gte: today },
+      status: { $in: ["Mới", LEGACY_BOOKING_STATUS] },
+    };
+
+    const [
+      bookings,
+      bookingCount,
+      plans,
+      heroConfig,
+      blogs,
+      todayBookings,
+      upcomingBookings,
+      pendingCount,
+      monthBookings,
+    ] = await Promise.all([
+      Booking.find(bookingFilter)
+        .sort({ date: 1, time: 1, createdAt: -1 })
+        .skip((requestedPage - 1) * bookingPageSize)
+        .limit(bookingPageSize)
+        .lean(),
+      Booking.countDocuments(bookingFilter),
+      Plan.find().lean(),
+      Config.findOne({ key: "hero_image" }).lean(),
+      getAdminBlogPosts(),
+      Booking.find({ archivedAt: null, date: today })
+        .sort({ time: 1, createdAt: 1 })
+        .lean(),
+      Booking.find({ ...activeFilter, date: { $gte: today } })
+        .sort({ date: 1, time: 1 })
+        .limit(8)
+        .lean(),
+      Booking.countDocuments(pendingFilter),
+      Booking.find({ ...activeFilter, date: { $gte: monthStart, $lte: today } })
+        .select("totalPrice")
+        .lean(),
+    ]);
+
+    const todayActiveBookings = todayBookings.filter((booking) =>
+      ACTIVE_BOOKING_STATUSES.includes(booking.status),
+    );
+    const todayGuests = todayActiveBookings.reduce(
+      (total, booking) => total + getBookingGuestCount(booking),
+      0,
+    );
+    const monthRevenue = monthBookings.reduce(
+      (total, booking) => total + (Number(booking.totalPrice) || 0),
+      0,
+    );
+    const bookingDetails = new Map();
+    [...bookings, ...todayBookings, ...upcomingBookings].forEach((booking) => {
+      bookingDetails.set(String(booking._id), {
+        id: String(booking._id),
+        bookingCode: booking.bookingCode || `KK-${String(booking._id).slice(-6).toUpperCase()}`,
+        fullname: booking.fullname || "Khách chưa có tên",
+        email: booking.email || "",
+        phone: booking.phone || "",
+        shopName: booking.shopName || "Kokoro Kimono Rental",
+        date: booking.date || "",
+        time: booking.time || "",
+        totalPrice: Number(booking.totalPrice) || 0,
+        status: booking.status || "Mới",
+        language: booking.language || "",
+        guests: booking.guests || [],
+        statusHistory: booking.statusHistory || [],
+        notes: booking.notes || [],
+        archivedAt: booking.archivedAt || null,
+        createdAt: booking.createdAt || null,
+      });
+    });
+
+    const hasBookingFilters = Boolean(
+      normalizeEnv(req.query.q) ||
+        normalizeEnv(req.query.status) ||
+        normalizeEnv(req.query.date) ||
+        req.query.archived === "1" ||
+        requestedPage > 1,
+    );
+    const totalBookingPages = Math.max(
+      1,
+      Math.ceil(bookingCount / bookingPageSize),
+    );
+    const buildBookingPageUrl = (page) => {
+      const params = new URLSearchParams();
+      if (normalizeEnv(req.query.q)) params.set("q", normalizeEnv(req.query.q));
+      if (normalizeEnv(req.query.status)) params.set("status", normalizeEnv(req.query.status));
+      if (normalizeEnv(req.query.date)) params.set("date", normalizeEnv(req.query.date));
+      if (req.query.archived === "1") params.set("archived", "1");
+      params.set("page", String(page));
+      return `/admin?${params.toString()}#tab-bookings`;
+    };
 
     res.render("admin", {
       bookings,
       plans,
       blogs,
       heroImage: heroConfig ? heroConfig.value : "",
-      pageTitle: "Quản trị Hệ thống",
+      pageTitle: "Kokoro Operations",
+      bookingStatuses: BOOKING_STATUSES,
+      bookingDataJson: escapeJsonForHtml([...bookingDetails.values()]),
+      bookingStatusesJson: escapeJsonForHtml(BOOKING_STATUSES),
+      dashboard: {
+        today,
+        todayBookings,
+        upcomingBookings,
+        todayGuests,
+        pendingCount,
+        monthRevenue,
+        activeTodayCount: todayActiveBookings.length,
+      },
+      filters: {
+        q: normalizeEnv(req.query.q),
+        status: normalizeEnv(req.query.status),
+        date: normalizeEnv(req.query.date),
+        archived: req.query.archived === "1",
+      },
+      notice: normalizeEnv(req.query.notice),
+      defaultAdminTab: hasBookingFilters ? "bookings" : "dashboard",
+      pagination: {
+        page: requestedPage,
+        totalPages: totalBookingPages,
+        totalItems: bookingCount,
+        previousUrl:
+          requestedPage > 1 ? buildBookingPageUrl(requestedPage - 1) : "",
+        nextUrl:
+          requestedPage < totalBookingPages
+            ? buildBookingPageUrl(requestedPage + 1)
+            : "",
+      },
+      csrfToken: getAdminCsrfToken(req),
     });
   } catch (error) {
-    res.send("Lỗi Admin: " + error.message);
+    console.error("Lỗi Admin:", error);
+    res.status(500).send("Không thể tải trang quản trị.");
   }
 });
 
@@ -1587,6 +1829,7 @@ app.get("/admin", requireLogin, async (req, res) => {
 app.post(
   "/admin/plan/save",
   requireLogin,
+  requireAdminCsrf,
   upload.array("photos", 10),
   async (req, res) => {
     try {
@@ -1597,6 +1840,7 @@ app.post(
         originalPrice,
         desc,
         tag,
+        isVisible,
         image: oldImage,
         imagesString,
       } = req.body;
@@ -1625,6 +1869,7 @@ app.post(
         images: images,
         desc: multiLangDesc,
         tag,
+        isVisible: isVisible === "on",
       };
 
       if (id) {
@@ -1638,7 +1883,7 @@ app.post(
         await new Plan(planData).save();
       }
 
-      res.redirect("/admin");
+      res.redirect(adminRedirect("plan-saved", "plans"));
     } catch (err) {
       console.error(err);
       res.send("Lỗi lưu gói: " + err.message);
@@ -1646,14 +1891,20 @@ app.post(
   },
 );
 
-app.post("/admin/plan/delete/:id", requireLogin, async (req, res) => {
-  await Plan.findByIdAndDelete(req.params.id);
-  res.redirect("/admin");
+app.post("/admin/plan/delete/:id", requireLogin, requireAdminCsrf, async (req, res) => {
+  try {
+    await Plan.findByIdAndDelete(req.params.id);
+    res.redirect(adminRedirect("plan-deleted", "plans"));
+  } catch (error) {
+    console.error("Lỗi xóa gói:", error);
+    res.redirect(adminRedirect("plan-delete-failed", "plans"));
+  }
 });
 
 app.post(
   "/admin/blog/save",
   requireLogin,
+  requireAdminCsrf,
   upload.single("thumbnail_file"),
   async (req, res) => {
     try {
@@ -1712,7 +1963,7 @@ app.post(
       };
 
       await BlogPost.create(blogData);
-      res.redirect("/admin#tab-blog");
+      res.redirect(adminRedirect("blog-saved", "content"));
     } catch (err) {
       console.error("Lỗi lưu blog:", err);
       res.status(500).send("Lỗi lưu blog: " + err.message);
@@ -1720,9 +1971,14 @@ app.post(
   },
 );
 
-app.post("/admin/blog/delete/:id", requireLogin, async (req, res) => {
-  await BlogPost.findByIdAndDelete(req.params.id);
-  res.redirect("/admin#tab-blog");
+app.post("/admin/blog/delete/:id", requireLogin, requireAdminCsrf, async (req, res) => {
+  try {
+    await BlogPost.findByIdAndDelete(req.params.id);
+    res.redirect(adminRedirect("blog-deleted", "content"));
+  } catch (error) {
+    console.error("Lỗi xóa blog:", error);
+    res.redirect(adminRedirect("blog-delete-failed", "content"));
+  }
 });
 
 // 👇 ROUTE XỬ LÝ CẤU HÌNH (Thay ảnh Hero) - Đã nâng cấp Upload Cloudinary
@@ -1730,6 +1986,7 @@ app.post("/admin/blog/delete/:id", requireLogin, async (req, res) => {
 app.post(
   "/admin/config/save",
   requireLogin,
+  requireAdminCsrf,
   upload.array("hero_photos", 5),
   async (req, res) => {
     try {
@@ -1758,7 +2015,7 @@ app.post(
         { upsert: true },
       );
 
-      res.redirect("/admin");
+      res.redirect(adminRedirect("settings-saved", "content"));
     } catch (err) {
       console.error(err);
       res.send("Lỗi lưu cấu hình: " + err.message);
@@ -1766,14 +2023,86 @@ app.post(
   },
 );
 
-app.post("/admin/update/:id", requireLogin, async (req, res) => {
-  await Booking.findByIdAndUpdate(req.params.id, { status: req.body.status });
-  res.redirect("/admin");
+app.post("/admin/update/:id", requireLogin, requireAdminCsrf, async (req, res) => {
+  try {
+    const status = normalizeEnv(req.body.status);
+    const note = normalizeEnv(req.body.note).slice(0, 1000);
+    if (!BOOKING_STATUSES.includes(status)) {
+      return res.redirect(adminRedirect("invalid-status", "bookings"));
+    }
+
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.redirect(adminRedirect("booking-not-found", "bookings"));
+
+    const previousStatus = booking.status || "Mới";
+    if (previousStatus !== status) {
+      booking.status = status;
+      booking.statusHistory.push({
+        from: previousStatus,
+        to: status,
+        note,
+        changedBy: "Admin",
+      });
+    }
+
+    if (status === "Đã hủy") booking.cancelledAt = new Date();
+    if (status !== "Đã hủy") booking.cancelledAt = undefined;
+    await booking.save();
+    res.redirect(adminRedirect("booking-updated", "bookings"));
+  } catch (error) {
+    console.error("Lỗi cập nhật booking:", error);
+    res.redirect(adminRedirect("booking-update-failed", "bookings"));
+  }
 });
 
-app.post("/admin/delete/:id", requireLogin, async (req, res) => {
-  await Booking.findByIdAndDelete(req.params.id);
-  res.redirect("/admin");
+app.post("/admin/booking/:id/note", requireLogin, requireAdminCsrf, async (req, res) => {
+  try {
+    const content = normalizeEnv(req.body.note).slice(0, 1000);
+    if (!content) return res.redirect(adminRedirect("note-empty", "bookings"));
+
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.redirect(adminRedirect("booking-not-found", "bookings"));
+
+    booking.notes.push({ content, createdBy: "Admin" });
+    await booking.save();
+    res.redirect(adminRedirect("note-saved", "bookings"));
+  } catch (error) {
+    console.error("Lỗi lưu ghi chú:", error);
+    res.redirect(adminRedirect("note-save-failed", "bookings"));
+  }
+});
+
+app.post("/admin/delete/:id", requireLogin, requireAdminCsrf, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.redirect(adminRedirect("booking-not-found", "bookings"));
+
+    booking.archivedAt = new Date();
+    booking.notes.push({
+      content: "Đơn được lưu trữ khỏi danh sách vận hành.",
+      createdBy: "Admin",
+    });
+    await booking.save();
+    res.redirect(adminRedirect("booking-archived", "bookings"));
+  } catch (error) {
+    console.error("Lỗi lưu trữ booking:", error);
+    res.redirect(adminRedirect("booking-archive-failed", "bookings"));
+  }
+});
+
+app.post("/admin/booking/:id/restore", requireLogin, requireAdminCsrf, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.redirect(adminRedirect("booking-not-found", "bookings"));
+
+    booking.archivedAt = undefined;
+    booking.notes.push({ content: "Đơn được khôi phục vào danh sách vận hành.", createdBy: "Admin" });
+    await booking.save();
+    res.redirect(adminRedirect("booking-restored", "bookings"));
+  } catch (error) {
+    console.error("Lỗi khôi phục booking:", error);
+    res.redirect(adminRedirect("booking-restore-failed", "bookings"));
+  }
 });
 
 // ==========================================
@@ -1786,12 +2115,14 @@ cron.schedule(
     console.log("⏳ Đang chạy Cronjob kiểm tra lịch hẹn hôm nay...");
     try {
       // Lấy ngày hôm nay theo chuẩn YYYY-MM-DD
-      const todayString = new Date().toLocaleDateString("en-CA", {
-        timeZone: "Asia/Tokyo",
-      });
+      const todayString = getTokyoDate();
 
       // Tìm tất cả đơn hàng có ngày hẹn là hôm nay và trạng thái không phải là đã hủy
-      const bookingsToday = await Booking.find({ date: todayString });
+      const bookingsToday = await Booking.find({
+        date: todayString,
+        archivedAt: null,
+        status: { $in: ACTIVE_BOOKING_STATUSES },
+      });
 
       if (bookingsToday.length === 0) {
         console.log(`✅ [${todayString}] Hôm nay không có lịch hẹn nào.`);
