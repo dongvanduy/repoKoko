@@ -12,6 +12,7 @@ const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
+const { requireAdminCsrf, adminUploadFileFilter } = require("./middleware/admin-csrf");
 
 // Import Models
 const Booking = require("./models/booking");
@@ -638,7 +639,7 @@ const storage = new CloudinaryStorage({
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage, fileFilter: adminUploadFileFilter });
 
 const LANGUAGE_CODES = {
   vi: "vi",
@@ -1075,22 +1076,6 @@ const getAdminCsrfToken = (req) => {
     req.session.adminCsrfToken = crypto.randomBytes(32).toString("hex");
   }
   return req.session.adminCsrfToken;
-};
-
-const requireAdminCsrf = (req, res, next) => {
-  const expected = req.session.adminCsrfToken;
-  const received = normalizeEnv(req.body.csrfToken);
-  if (!expected || !received) return res.status(403).send("Yêu cầu không hợp lệ.");
-
-  const expectedBuffer = Buffer.from(expected);
-  const receivedBuffer = Buffer.from(received);
-  if (
-    expectedBuffer.length !== receivedBuffer.length ||
-    !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)
-  ) {
-    return res.status(403).send("Yêu cầu không hợp lệ.");
-  }
-  next();
 };
 
 // --- ROUTES ---
@@ -1829,8 +1814,8 @@ app.get("/admin", requireLogin, async (req, res) => {
 app.post(
   "/admin/plan/save",
   requireLogin,
-  requireAdminCsrf,
   upload.array("photos", 10),
+  requireAdminCsrf,
   async (req, res) => {
     try {
       const {
@@ -1904,8 +1889,8 @@ app.post("/admin/plan/delete/:id", requireLogin, requireAdminCsrf, async (req, r
 app.post(
   "/admin/blog/save",
   requireLogin,
-  requireAdminCsrf,
   upload.single("thumbnail_file"),
+  requireAdminCsrf,
   async (req, res) => {
     try {
       const {
@@ -1986,8 +1971,8 @@ app.post("/admin/blog/delete/:id", requireLogin, requireAdminCsrf, async (req, r
 app.post(
   "/admin/config/save",
   requireLogin,
-  requireAdminCsrf,
   upload.array("hero_photos", 5),
+  requireAdminCsrf,
   async (req, res) => {
     try {
       // 1. Lấy danh sách ảnh cũ (đang hiển thị)
