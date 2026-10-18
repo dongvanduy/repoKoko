@@ -53,7 +53,7 @@ async function publishUploads(req, res, next) {
     next();
   } catch (error) {
     await Promise.allSettled(published.map(id => cloudinary.uploader.destroy(id)));
-    next(error instanceof AppError ? error : new AppError(503, "upload_failed"));
+    next(error instanceof AppError ? error : Object.assign(new AppError(503, "upload_failed"), { cause: error }));
   } finally { await cleanup(req).catch(() => {}); }
 }
 module.exports = { upload, manageUploads, publishUploads, cleanup };

@@ -12,12 +12,34 @@ test("migration, reminder catch-up and shared abuse limits",async t=>{
   const {migrateBookings}=require("../services/migration");
   const {updateBooking}=require("../services/bookings");
   const date=bookingCalendar().tomorrow;
-  const legacy=await Booking.collection.insertOne({bookingCode:"LEGACY-TEST",date,time:"08:00",shopId:"1",shopName:"Test",fullname:"Test",email:"test@example.invalid",phone:"123456789",status:"Mới",guests:[{planName:"Kimono",price:3000}],totalPrice:3000,language:"en"});
+  const legacy=await Booking.collection.insertOne({bookingCode:"LEGACY-TEST",createdAt:new Date("2026-01-01T00:00:00Z"),date,time:"08:00",shopId:"1",shopName:"Test",fullname:"Test",email:"test@example.invalid",phone:"123456789",status:"Mới",guests:[{planName:"Kimono",price:3000}],totalPrice:3000,language:"en"});
   await t.test("dry run is read only; repeated migration preserves Tokyo time and counts",async()=>{
     const dry=await migrateBookings();assert.equal(dry.valid,1);assert.equal(dry.slots,1);
     assert.equal(await Slot.countDocuments(),0);assert.equal(await Config.countDocuments(),0);
     process.env.BOOKING_WRITES_ENABLED="false";
-    try {await migrateBookings({apply:true});await migrateBookings({apply:true});}finally{delete process.env.BOOKING_WRITES_ENABLED;}
+    try {
+      const {promisify}=require("node:util"),{execFile}=require("node:child_process"),path=require("node:path");
+      const result=await promisify(execFile)(process.execPath,["scripts/migrate-bookings.js","--apply"],{cwd:path.resolve(__dirname,".."),env:{...process.env},encoding:"utf8"});
+      const saved=result.stdout.match(/Backup saved: (.+)/);assert.ok(saved);
+      const directory=path.resolve(saved[1].trim()),root=path.resolve(".cache/booking-backups");
+      assert.equal(path.dirname(directory),root);
+      try{
+        const manifest=JSON.parse(await fs.readFile(path.join(directory,"manifest.json"),"utf8"));
+        assert.equal(manifest.collections.find(c=>c.name==="bookings").count,1);
+        assert.equal(manifest.collections.find(c=>c.name==="configs").count,0);
+        const {BSON}=require("mongoose").mongo;
+        const original=BSON.EJSON.parse((await fs.readFile(path.join(directory,"bookings.ejsonl"),"utf8")).trim(),{relaxed:false});
+        assert.equal(original._id.toHexString(),legacy.insertedId.toHexString());
+        assert.equal(original.startsAt,undefined);assert.equal(original.time,"08:00");
+        assert.ok(original.createdAt instanceof Date);assert.equal(original.createdAt.toISOString(),"2026-01-01T00:00:00.000Z");
+        const crypto=require("node:crypto");
+        for(const row of manifest.collections){
+          const bytes=await fs.readFile(path.join(directory,row.filename));
+          assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"),row.sha256);
+        }
+      }finally{await fs.rm(directory,{recursive:true,force:true});}
+      await migrateBookings({apply:true});await migrateBookings({apply:true});
+    }finally{delete process.env.BOOKING_WRITES_ENABLED;}
     const b=await Booking.findById(legacy.insertedId);
     assert.equal(b.startsAt.toISOString(),arrivalInstant(date,"08:00").toISOString());
     assert.equal(b.time,"08:00");assert.equal(b.date,date);assert.equal(b.guestCount,1);

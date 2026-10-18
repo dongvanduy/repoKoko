@@ -11,14 +11,18 @@ test("Tokyo arrival is independent of process timezone", () => {
     assert.equal(result.status, 0); assert.equal(result.stdout.trim(), "2026-10-18T23:00:00.000Z");
   }
 });
-test("Tokyo calendar, month/year/leap boundaries and exact lead-time", () => {
+test("Tokyo calendar, month/year/leap boundaries and same-day booking", () => {
   assert.deepEqual(time.bookingCalendar(new Date("2026-12-31T14:59:00Z")), { today: "2026-12-31", tomorrow: "2027-01-01", timeZone: "Asia/Tokyo" });
   assert.equal(time.tokyoDate(new Date("2026-12-31T15:00:00Z")), "2027-01-01");
   assert.equal(time.bookingCalendar(new Date("2028-02-28T00:00:00Z")).tomorrow, "2028-02-29");
   assert.equal(time.validDate("2026-02-30"), false); assert.equal(time.validDate("2028-02-29"), true);
   assert.throws(() => time.arrivalInstant("2026-10-19", "25:99"));
-  assert.equal(time.hasLeadTime("2026-10-19", "08:00", new Date("2026-10-18T22:00:00Z")), true);
-  assert.equal(time.hasLeadTime("2026-10-19", "08:00", new Date("2026-10-18T22:00:00.001Z")), false);
+  const afternoon = new Date("2026-10-19T15:00:00+09:00");
+  assert.equal(time.isBookableDate("2026-10-19", afternoon), true);
+  assert.equal(time.isBookableDate("2026-10-18", afternoon), false);
+  assert.equal(time.isBookableDate("2026-02-30", afternoon), false);
+  assert.equal(time.isBookableDate("2026-12-31", new Date("2026-12-31T14:59:59Z")), true);
+  assert.equal(time.isBookableDate("2026-12-31", new Date("2026-12-31T15:00:00Z")), false);
 });
 test("startup fails closed and contact rejects object/array/header injections", () => {
   assert.throws(() => validateConfig({}), /Missing configuration/);
@@ -30,4 +34,18 @@ test("email and embedded JSON escape customer text while preserving JST", () => 
   assert.match(mail.html, /&lt;img/); assert.doesNotMatch(mail.html, /<script>/);
   assert.match(mail.text, /2026-10-19 08:00/); assert.match(mail.text, /JST, UTC\+9/);
   assert.ok(!jsonForHtml({ value:"</script><script>" }).includes("<"));
+});
+
+test("configuration rejects shell commands pasted into SITE_URL",()=>{
+  const env={MONGO_URI:"mongodb://example.invalid/test",SESSION_SECRET:"x".repeat(40),ADMIN_USER:"admin",ADMIN_PASSWORD_HASH:"$argon2id$test",NODE_ENV:"production"};
+  assert.doesNotThrow(()=>validateConfig({...env,SITE_URL:"https://kokorokimono.com"}));
+  assert.throws(()=>validateConfig({...env,SITE_URL:"https://kokorokimono.com BOOKING_WRITES_ENABLED=true NODE_ENV=production pm2 restart kokoro --update-env"}),/SITE_URL/);
+});
+test("error diagnostics expose codes without customer values or connection secrets",()=>{
+  const {safeErrorDetails,normalizeUploadError}=require("../lib/errors");
+  const internal=Object.assign(new Error("mongodb://user:secret@host/customer-email"),{name:"MongoServerError",code:11000});
+  const details=JSON.stringify(safeErrorDetails(Object.assign(new Error("private"),{cause:internal})));
+  assert.match(details,/11000/);assert.doesNotMatch(details,/secret|customer-email|mongodb/);
+  const upload=normalizeUploadError(Object.assign(new Error("private file name"),{name:"MulterError",code:"LIMIT_FILE_SIZE"}));
+  assert.equal(upload.status,413);assert.equal(upload.code,"upload_too_large");
 });

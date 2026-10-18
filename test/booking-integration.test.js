@@ -39,6 +39,18 @@ test("booking transactions, pricing, retries and background jobs", async t => {
     req.body.fullname="Changed";
     await assert.rejects(service.createBooking(req),e=>e.code==="request_changed");
   });
+  await t.test("customer and admin mail jobs commit together and retries do not duplicate them",async()=>{
+    const previous=process.env.ADMIN_EMAIL;process.env.ADMIN_EMAIL="admin@example.invalid";
+    try{
+      const request=make("admin-mail",{time:"10:30"});
+      const first=await service.createBooking(request),retry=await service.createBooking(request);
+      assert.equal(String(first._id),String(retry._id));
+      const jobs=await Job.find({"payload.bookingId":String(first._id)}).lean();
+      assert.equal(jobs.length,2);
+      assert.deepEqual(jobs.map(j=>j.payload.audience).sort(),["admin","customer"]);
+      assert.equal((await Slot.findOne({date,time:"10:30"})).reserved,1);
+    }finally{process.env.ADMIN_EMAIL=previous;}
+  });
   await t.test("server validates date, slot, quote, quantity, hidden plan and changed prices",async()=>{
     await assert.rejects(service.createBooking(make("bad",{date:"2026-02-30"})),e=>e.status===400);
     await assert.rejects(service.createBooking(make("bad",{time:"25:99"})),e=>e.status===400);
@@ -57,6 +69,35 @@ test("booking transactions, pricing, retries and background jobs", async t => {
     await Plan.updateOne({_id:plan._id},{$set:{isVisible:false}});
     await assert.rejects(service.createBooking(make("hidden",{time:"10:00"})),e=>e.code==="invalid_plan");
     await Plan.updateOne({_id:plan._id},{$set:{isVisible:true,price:3000}});
+  });
+  await t.test("today accepts past and near-arrival slots; yesterday is rejected",async()=>{
+    const day=new Date(date+"T00:00:00Z");day.setUTCDate(day.getUTCDate()+1);
+    const today=day.toISOString().slice(0,10),now=new Date(today+"T15:00:00+09:00");
+    const slots=await service.availableSlots(today,"1",1,now);
+    assert.equal(slots.find(s=>s.time==="08:00").isAvailable,true);
+    const old=await service.availableSlots(date,"1",1,now);
+    assert.ok(old.every(s=>!s.isAvailable&&s.reason==="past_date"));
+    for(const mode of ["quick","multi"]){
+      for(const time of ["08:00","15:00","15:30"]){
+        const owner=mode+time,req=make(owner,{date:today,time});
+        req.body.quote=service.issueQuote(priced,owner,mode);
+        if(mode==="quick")req.body.quantity="1";
+        const booking=await service.createBooking({...req,now});
+        assert.equal(booking.date,today);assert.equal(booking.time,time);
+      }
+    }
+    const req=make("past-day",{date,time:"08:00"});
+    await assert.rejects(service.createBooking({...req,now}),e=>e.status===409&&e.code==="past_date");
+    assert.equal(await Booking.countDocuments({owner:"past-day"}),0);
+  });
+  await t.test("booking readiness explains missing migration and maintenance",async()=>{
+    const {checkBookingReadiness}=require("../services/booking-readiness");
+    const client=db.mongoose.connection.getClient();
+    assert.equal((await checkBookingReadiness({client,env:{}})).ready,true);
+    await assert.rejects(checkBookingReadiness({client,env:{BOOKING_WRITES_ENABLED:"false"}}),e=>e.code==="BOOKING_PAUSED");
+    await Config.deleteOne({key:"booking_inventory_v1"});
+    await assert.rejects(checkBookingReadiness({client,env:{}}),e=>e.code==="INVENTORY_NOT_INITIALIZED");
+    await Config.create({key:"booking_inventory_v1",value:{ready:true}});
   });
   await t.test("worker lease prevents simultaneous send and retries failures",async()=>{
     const {runOnce}=require("../services/jobs");

@@ -1,6 +1,6 @@
 # Kokoro — Express / EJS / MongoDB
 
-Ứng dụng giữ cả form đặt nhanh và luồng đặt nhiều bước. **Ngày/giờ chọn là giờ cửa hàng Tokyo**, không phụ thuộc múi giờ thiết bị. Chọn `19/10/2026 08:00` lưu `date=2026-10-19`, `time=08:00`, `timeZone=Asia/Tokyo`, `startsAt=2026-10-18T23:00:00.000Z`. Đặt trong ngày cần còn ít nhất 60 phút tại lúc xác nhận.
+Ứng dụng giữ cả form đặt nhanh và luồng đặt nhiều bước. **Ngày/giờ chọn là giờ cửa hàng Tokyo**, không phụ thuộc múi giờ thiết bị. Chọn `19/10/2026 08:00` lưu `date=2026-10-19`, `time=08:00`, `timeZone=Asia/Tokyo`, `startsAt=2026-10-18T23:00:00.000Z`. Được chọn mọi khung giờ còn chỗ trong hôm nay Tokyo, kể cả giờ đã qua; chỉ chặn ngày quá khứ.
 
 ## Chạy cục bộ
 
@@ -22,6 +22,7 @@ npm test
 npx playwright install chromium
 npm run test:browser
 npm audit --omit=dev
+npm run check:deploy -- --booking
 ```
 
 Các test tạo **replica set tạm riêng**, không dùng MONGO_URI Atlas trong .env; không gửi SMTP hoặc upload Cloudinary thật. Lần đầu cần tải MongoDB test binary và Chromium. Browser test bao gồm Việt Nam, Tokyo, UTC, Los Angeles; cả hai luồng, session/CSRF, gửi lại sau mất phản hồi và lỗi dịch vụ. Ảnh kiểm tra nằm trong `test-results/`.

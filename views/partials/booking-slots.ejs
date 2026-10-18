@@ -1,6 +1,6 @@
 <section class="bg-white p-5 rounded-2xl border border-gray-200 my-5" data-slot-picker data-initial-time="<%= typeof timeValue === 'string' ? timeValue : '' %>">
   <p class="font-semibold text-accent mb-1"><%= ui.timezone %></p>
-  <p class="text-sm text-sub1 mb-4"><%= ui.lead %></p>
+  <p class="text-sm text-sub1 mb-4"><%= ui.bookingWindow %></p>
   <label for="booking-date" class="block font-bold mb-2"><%= __('detail.date') %></label>
   <input id="booking-date" type="date" name="date" required min="<%= calendar.today %>" value="<%= typeof dateValue === 'string' && dateValue ? dateValue : calendar.tomorrow %>" class="w-full border border-gray-300 p-3 rounded-lg">
   <fieldset class="mt-5"><legend class="font-bold mb-2"><%= __('detail.time') %></legend>

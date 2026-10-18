@@ -1,4 +1,4 @@
-require("dotenv").config({ quiet: true });
+require("dotenv").config({ path: require("node:path").join(__dirname, ".env"), quiet: true });
 const express = require("express");
 const mongoose = require("mongoose");
 const session = require("express-session");
@@ -43,7 +43,7 @@ const BookingService = require("./services/bookings");
 const { localizeSeoObject } = require("./services/seo");
 const { initialText } = require("./services/translations");
 const Job = require("./models/Job");
-const { AppError } = require("./lib/errors");
+const { AppError, safeErrorDetails, normalizeUploadError } = require("./lib/errors");
 const { text, integer, safeImageUrl, jsonForHtml } = require("./lib/validation");
 const { messages, errorMessage } = require("./lib/messages");
 const { tokyoDate, validDate } = require("./lib/time");
@@ -1010,7 +1010,7 @@ app.post(
       // 👇 CẬP NHẬT: Dịch cả Tiêu đề (title) và Mô tả (desc)
       const sourceLocale = req.getLocale();
       const cleanTitle = text(title, "title", 200);
-      const cleanDesc = text(desc, "description", 10000);
+      const cleanDesc = text(desc, "description", 10000, false);
       const multiLangTitle = initialText(cleanTitle, sourceLocale);
       const multiLangDesc = initialText(cleanDesc, sourceLocale);
 
@@ -1042,7 +1042,7 @@ app.post(
 
       res.redirect(adminRedirect("plan-saved", "plans"));
     } catch (err) {
-      console.error(JSON.stringify({ event: "request_error" }));
+      console.error(JSON.stringify({ event: "request_error", ...safeErrorDetails(err) }));
       res.status(err.status || 500).send("Không thể xử lý yêu cầu.");
     }
   },
@@ -1258,15 +1258,16 @@ app.post("/admin/jobs/:id/retry", requireLogin, requireAdminCsrf, async (req, re
 
 app.use((req, res, next) => next(new AppError(404, "not_found")));
 app.use((error, req, res, next) => {
+  error = normalizeUploadError(error);
   if (res.headersSent) return next(error);
   const status = error.status || (error.name === "MulterError" ? 400 : error.name === "ValidationError" || error.name === "CastError" ? 400 : 503);
   const code = error instanceof AppError ? error.code : status === 400 ? "invalid_request" : "service_unavailable";
   const language = typeof req.getLocale === "function" ? req.getLocale() : "en";
   const message = errorMessage(code, language);
-  console.error(JSON.stringify({ event: "request_error", code, status, route: req.route?.path || "unknown" }));
+  console.error(JSON.stringify({ event: "request_error", code, status, route: req.route?.path || "unknown", ...safeErrorDetails(error) }));
   res.set("Cache-Control", "no-store");
   if (req.path.startsWith("/api/")) return res.status(status).json({ error: message, code });
-  res.status(status).render("error", { message, ui: messages(language), locale: language, asset });
+  res.status(status).render("error", { message, ui: messages(language), locale: language, asset, backUrl: req.path.startsWith("/admin/") ? "/admin#tab-plans" : "/booking-step1" });
 });
 async function start() {
   validateConfig();
@@ -1282,7 +1283,7 @@ async function start() {
   return { server, stop };
 }
 if (require.main === module) start().catch(error => {
-  console.error("Startup failed:", /^(Missing configuration|Use a session|TRUST_PROXY|Production requires|MongoDB transactions|Assets are missing)/.test(error.message) ? error.message : "Check service configuration and database connectivity.");
+  console.error("Startup failed:", /^(Missing configuration|Use a session|TRUST_PROXY|Production requires|SITE_URL|MongoDB transactions|Assets are missing)/.test(error.message) ? error.message : "Check service configuration and database connectivity.");
   process.exitCode = 1;
   mongoose.disconnect().catch(() => {});
 });

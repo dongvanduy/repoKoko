@@ -12,12 +12,12 @@ node --version
 npm ci --include=dev
 npm run build
 node scripts/hash-admin.js --write
-NODE_ENV=production npm run check:deploy
+SITE_URL=https://kokorokimono.com NODE_ENV=production npm run check:deploy
 ```
 
 Lệnh hash chạy lại được nếu đã có ADMIN_PASSWORD_HASH. Các lệnh kiểm tra không migrate hoặc ghi booking. Nếu check:deploy báo thiếu SITE_URL/secret/hash, sửa cấu hình trước khi restart; không tắt kiểm tra bảo mật để chạy tiếp. Node tối thiểu 22.13.1. Build ở thư mục release riêng nếu hệ thống có quy trình atomic deploy.
 
-Với PM2, chạy `pm2 list`, chọn đúng tên/ID website, kiểm tra `pm2 describe TEN_APP` để bảo đảm script path là server.js trong thư mục trên, rồi `NODE_ENV=production pm2 restart TEN_APP --update-env`. Không restart all nếu VPS chạy dịch vụ khác. Nếu dùng ecosystem file, đặt NODE_ENV trong cấu hình tương ứng. Với systemd, restart đúng unit website. Tiến trình Node phải được khởi động lại sau cập nhật JavaScript; tải lại Chrome không làm việc này.
+Với PM2, chạy `pm2 list`, chọn đúng tên/ID website, kiểm tra `pm2 describe TEN_APP` để bảo đảm script path là server.js trong thư mục trên, rồi `SITE_URL=https://kokorokimono.com NODE_ENV=production pm2 restart TEN_APP --update-env`. Không restart all nếu VPS chạy dịch vụ khác. Nếu dùng ecosystem file, đặt NODE_ENV trong cấu hình tương ứng. Với systemd, restart đúng unit website. Tiến trình Node phải được khởi động lại sau cập nhật JavaScript; tải lại Chrome không làm việc này.
 
 Xác minh `curl -I https://kokorokimono.com/` trả 200 và kiểm tra log riêng ứng dụng nếu không khởi động được. `/health` chỉ kiểm tra kết nối DB; đặt lịch vẫn cần migration bộ đếm như hướng dẫn bên dưới. Chưa kiểm tra hoặc sửa trực tiếp tiến trình VPS từ workspace này.
 
@@ -37,7 +37,7 @@ Trang kết quả chỉ mở bằng session đã đặt, kể cả có mã đơn
 2. Backup DB, ghi lại phiên bản ứng dụng. Dừng **tất cả** instance đang ghi booking, admin trạng thái và worker; không chạy song song mã cũ và mã mới.
 3. Trong môi trường chạy migration, đặt `BOOKING_WRITES_ENABLED=false`. Chạy `node scripts/migrate-bookings.js` để đối soát chỉ đọc.
 4. Báo cáo chỉ chứa ID, số lượng và mã lỗi. Sửa riêng các bản ghi bất thường sau đối soát; script không tự đoán ngày, giờ hoặc cửa hàng. Bản ghi đang chiếm chỗ nhưng sai dữ liệu sẽ chặn apply. Khung giờ đã vượt sức chứa được báo cáo và giữ nguyên số khách thực tế, không tự xóa đơn.
-5. Chạy `node scripts/migrate-bookings.js --apply`. Script giữ nguyên date/time, bổ sung startsAt/guestCount/timeZone, dựng lại bộ đếm, đánh dấu Config `booking_inventory_v1.value.ready=true` **sau cùng**.
+5. Chạy `node scripts/migrate-bookings.js --apply`. Script tự sao lưu EJSON các collection bị tác động vào `.cache/booking-backups/` trước khi ghi, rồi giữ nguyên date/time, bổ sung startsAt/guestCount/timeZone, dựng lại bộ đếm, đánh dấu Config `booking_inventory_v1.value.ready=true` **sau cùng**.
 6. Nếu gián đoạn giữa chừng, giữ mọi writer dừng và chạy lại apply. Marker false chặn nhận đơn cho tới khi hoàn tất. Không chạy apply khi còn writer hoạt động.
 7. Khởi động bản mới với `BOOKING_WRITES_ENABLED=true`, kiểm tra /health, form nhanh, nhiều bước, hủy/khôi phục và queue email. Mở traffic sau nghiệm thu.
 
@@ -67,7 +67,7 @@ Nội dung SEO dịch sẵn bằng `npm run seo:prepare` rồi đưa file JSON c
 
 Theo dõi /health, tỉ lệ 400/409/429/503, độ trễ route, số lỗi login và queue pending/failed. Log không ghi password, secret, email, số điện thoại hoặc request body. Xung đột sức chứa là 409 slot_full; maintenance/transaction lỗi là 503.
 
-Nghiệm thu staging: hai luồng ở bốn múi giờ; đúng ranh giới 60 phút; sửa giá/gói; 21 yêu cầu cho 20 chỗ; gửi lại sau mất phản hồi; hủy và khôi phục; CSRF multipart; ảnh giả/ảnh quá 5 MiB; SMTP/Mongo/translation lỗi; không có CSP violation.
+Nghiệm thu staging: hai luồng ở bốn múi giờ; được đặt giờ đã qua trong hôm nay Tokyo và chặn ngày quá khứ; sửa giá/gói; 21 yêu cầu cho 20 chỗ; gửi lại sau mất phản hồi; hủy và khôi phục; CSRF multipart; ảnh giả/ảnh quá 5 MiB; SMTP/Mongo/translation lỗi; không có CSP violation.
 
 Đo hiệu năng trước/sau cùng thiết bị, cùng dữ liệu và cấu hình mạng trên staging. Chạy tối thiểu 5 lần cho mỗi trang, giữ báo cáo thô. Dữ liệu thật p75 mục tiêu LCP <= 2,5s, INP <= 200ms, CLS <= 0,1 cần theo dõi sau triển khai; kiểm thử local không chứng minh được các chỉ số này.
 

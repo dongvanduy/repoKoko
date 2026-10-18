@@ -6,9 +6,9 @@ const Config = require("../models/Config");
 const Slot = require("../models/SlotInventory");
 const Job = require("../models/Job");
 const { shops, options, timeSlots } = require("../data");
-const { AppError } = require("../lib/errors");
+const { AppError, safeErrorDetails } = require("../lib/errors");
 const { text, integer, contact } = require("../lib/validation");
-const { TIME_ZONE, validDate, arrivalInstant, hasLeadTime, tokyoDate } = require("../lib/time");
+const { TIME_ZONE, validDate, arrivalInstant, isBookableDate, tokyoDate } = require("../lib/time");
 const ACTIVE = ["Mới", "Đã đặt (Chờ đến)", "Đã xác nhận", "Đã đến"];
 const STATUSES = ["Mới", "Đã xác nhận", "Đã đến", "Hoàn tất", "Đã hủy"];
 const MAX_GUESTS = Math.max(...timeSlots.map(s => s.maxGuests));
@@ -102,7 +102,7 @@ async function availableSlots(date, shopId, quantity, now = new Date()) {
   return timeSlots.map(slot => {
     const used = inventory.find(row => row.time === slot.time)?.reserved || 0;
     const remaining = Math.max(0, slot.maxGuests - used);
-    const reason = !hasLeadTime(date, slot.time, now) ? "lead_time" : remaining < qty ? "full" : null;
+    const reason = !isBookableDate(date, now) ? "past_date" : remaining < qty ? "full" : null;
     return { time: slot.time, remaining, isFull: remaining < qty, isAvailable: reason === null, reason };
   });
 }
@@ -123,6 +123,7 @@ async function transaction(work) {
     catch (error) {
       if (error.code === 11000 && attempt < 4) continue;
       if (error instanceof AppError) throw error;
+      console.error(JSON.stringify({ event: "booking_transaction_failed", ...safeErrorDetails(error) }));
       const wrapped = new AppError(503, "booking_unavailable"); wrapped.cause = error; throw wrapped;
     }
   }
@@ -146,7 +147,7 @@ async function createBooking({ body, owner, language, now }) {
     }
     const slot = timeSlots.find(s => s.time === data.time);
     if (!slot) throw new AppError(400, "invalid_slot");
-    if (!hasLeadTime(data.date, data.time, now || new Date())) throw new AppError(409, "lead_time");
+    if (!isBookableDate(data.date, now || new Date())) throw new AppError(409, "past_date");
     const priced = await priceLines(data.lines, language, session);
     if (priced.lines.some(p => quote.lines.find(q => q.id === p.id)?.price !== p.price) ||
         options.some(o => o.price !== quote.optionPrices[o.id])) {
@@ -168,12 +169,12 @@ async function createBooking({ body, owner, language, now }) {
       status: "Mới", statusHistory: [{ to: "Mới", note: "Đơn được tạo từ website.", changedBy: "Website" }],
       language, owner, requestKey: quote.key, requestHash,
     });
-    if (!hasLeadTime(data.date, data.time, now || new Date())) throw new AppError(409, "lead_time");
+    if (!isBookableDate(data.date, now || new Date())) throw new AppError(409, "past_date");
     await changeCapacity(booking, guests.length, session);
     await booking.save({ session });
     const jobs = [{ key: "confirmation:customer:" + booking._id, type: "email", payload: { bookingId: String(booking._id), kind: "confirmation", audience: "customer" } }];
     if (process.env.ADMIN_EMAIL) jobs.push({ key: "confirmation:admin:" + booking._id, type: "email", payload: { bookingId: String(booking._id), kind: "confirmation", audience: "admin" } });
-    await Job.create(jobs, { session });
+    await Job.create(jobs, { session, ordered: true });
     return booking;
   });
 }

@@ -63,6 +63,38 @@ test("both booking flows preserve Tokyo wall time in four browser zones; admin a
       await context.close();
     });
   }
+  await t.test("both flows allow earlier slots today across four browser zones",async()=>{
+    await require("../../models/RateBucket").deleteMany({});
+    const RealDate=global.Date;
+    const sameDay=future,instant=new RealDate(sameDay+"T15:00:00+09:00").getTime();
+    global.Date=class extends RealDate{
+      constructor(...args){super(...(args.length?args:[instant]));}
+      static now(){return instant;}
+    };
+    try{
+      for(const timezoneId of ["Asia/Ho_Chi_Minh","Asia/Tokyo","UTC","America/Los_Angeles"]){
+        const context=await browser.newContext({timezoneId});
+        try{
+          const page=await context.newPage();
+          await page.goto(base+"/plan/"+plan._id);
+          assert.doesNotMatch(await page.locator("[data-slot-picker]").innerText(),/60/);
+          await page.locator('[name="date"]').fill(sameDay);
+          await page.locator('[name="time"][value="08:00"]').check({force:true});
+          await page.locator('[name="fullname"]').fill("Same day "+timezoneId);
+          await page.locator('[name="email"]').fill("test@example.invalid");await page.locator('[name="phone"]').fill("0901234567");
+          await page.locator('button[type="submit"]').click();await page.waitForURL("**/booking-success/**");
+          await page.goto(base+"/booking-step1");
+          await page.locator(".quantity-select").selectOption("1");await page.locator('button[type="submit"]').click();
+          await page.locator('[name="date"]').fill(sameDay);
+          await page.locator('[name="time"][value="08:30"]').check({force:true});await page.locator('button[type="submit"]').click();
+          await page.locator('[name="fullname"]').fill("Same day multi "+timezoneId);
+          await page.locator('[name="email"]').fill("test@example.invalid");await page.locator('[name="phone"]').fill("0901234567");
+          await page.locator('[name="time"][value="08:30"]').waitFor();
+          await page.locator('button[type="submit"]:visible').first().click();await page.waitForURL("**/booking-success/**");
+        }finally{await context.close();}
+      }
+    }finally{global.Date=RealDate;}
+  });
   await t.test("language links work without Referer and keep the current page",async()=>{
     const context=await browser.newContext();await context.route(/^https:\/\//,route=>route.abort());
     const page=await context.newPage();page.on("pageerror",e=>errors.push(e.message));
@@ -114,6 +146,37 @@ test("both booking flows preserve Tokyo wall time in four browser zones; admin a
     await page.locator('form[action="/logout"] button:visible').first().click();await page.waitForURL("**/login");
     const anonymous=await browser.newContext();const other=await anonymous.request.get(base+"/booking-success/"+(await Booking.findOne()).bookingCode);assert.equal(other.status(),404);await anonymous.close();
     await context.close();
+  });
+  await t.test("admin creates plans with empty description and valid image, rejects oversized uploads clearly",async()=>{
+    const context=await browser.newContext();await context.route(/^https:\/\//,route=>route.abort());
+    const page=await context.newPage();await page.goto(base+"/login");
+    await page.locator('[name="username"]').fill("testadmin");await page.locator('[name="password"]').fill("test-password");
+    await page.locator('button[type="submit"]').click();await page.waitForURL("**/admin");
+    await page.locator('[data-tab-target="plans"]:visible').first().click();
+    const cloud=require("cloudinary").v2,original=cloud.uploader.upload;let calls=0;
+    cloud.uploader.upload=async()=>{calls++;return{public_id:"test-plan",secure_url:"https://res.cloudinary.com/test/image/upload/plan.png"};};
+    try{
+      for(const withImage of [false,true]){
+        await page.locator("#openAddPlan").click();
+        const title=withImage?"Plan with image":"Plan without description";
+        await page.locator("#planTitle").fill(title);await page.locator("#planPrice").fill("4500");
+        if(withImage){
+          const buffer=await require("sharp")({create:{width:10,height:10,channels:3,background:"red"}}).png().toBuffer();
+          await page.locator("#planPhotos").setInputFiles({name:"plan.png",mimeType:"image/png",buffer});
+        }
+        const response=page.waitForResponse(r=>r.url()===base+"/admin/plan/save"&&r.request().method()==="POST");
+        await page.locator('form[action="/admin/plan/save"] button[type="submit"]').click();
+        assert.equal((await response).status(),302);await page.waitForURL("**/admin?notice=plan-saved*");
+        const saved=await Plan.findOne({"title.en":title});
+        assert.ok(saved);assert.equal(saved.desc.en,"");assert.equal(saved.price,4500);
+        assert.equal(await require("../../models/Job").countDocuments({"payload.id":String(saved._id),type:"translation"}),1);
+      }
+      assert.equal(calls,1);
+      const csrfToken=await page.locator('form[action="/admin/plan/save"] [name="csrfToken"]').inputValue();
+      const response=await context.request.post(base+"/admin/plan/save",{multipart:{csrfToken,title:"Too large",price:"4500",desc:"",photos:{name:"large.png",mimeType:"image/png",buffer:Buffer.alloc(5*1024*1024+1)}}});
+      assert.equal(response.status(),413);assert.match(await response.text(),/5 MiB/);
+      assert.equal(calls,1);assert.equal(await Plan.countDocuments({"title.en":"Too large"}),0);
+    }finally{cloud.uploader.upload=original;await context.close();}
   });
   await t.test("slot requests ignore late responses and expose a retry after errors",async()=>{
     const context=await browser.newContext(); const page=await context.newPage();
@@ -184,6 +247,6 @@ test("both booking flows preserve Tokyo wall time in four browser zones; admin a
     const failed=await fetch(base+"/api/available-slots?date="+date+"&shopId=1&totalQuantity=1");
     assert.equal(failed.status,503);assert.equal((await failed.json()).code,"service_unavailable");
   });
-  fs.writeFileSync(path.resolve("test-results/browser-check.json"),JSON.stringify({zones:4,flows:8,date,errors},null,2));
+  fs.writeFileSync(path.resolve("test-results/browser-check.json"),JSON.stringify({zones:4,flows:16,sameDayPastSlots:true,date,errors},null,2));
   assert.deepEqual(errors,[]);
 });
