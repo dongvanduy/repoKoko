@@ -2,17 +2,24 @@
   "name": "web",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "test:browser": "node --test test/browser/*.test.js",
+    "build": "node scripts/build-assets.js",
+    "admin:hash": "node scripts/hash-admin.js",
+    "db:migrate": "node scripts/migrate-bookings.js",
+    "db:seed": "node scripts/seed.js",
+    "seo:prepare": "node scripts/prepare-seo.js",
+    "prestart": "node scripts/check-assets.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "cloudinary": "^1.41.3",
+    "cloudinary": "2.11.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
@@ -20,10 +27,27 @@
     "express-session": "^1.18.2",
     "google-translate-api-x": "^10.7.2",
     "i18n": "^0.15.3",
-    "mongoose": "^9.0.2",
-    "multer": "^2.0.2",
-    "multer-storage-cloudinary": "^4.0.0",
-    "node-cron": "^4.2.1",
-    "nodemailer": "^6.10.1"
+    "mongoose": "9.11.2",
+    "multer": "2.4.0",
+    "nodemailer": "10.1.2",
+    "connect-mongo": "^5.1.0",
+    "helmet": "^8.1.0",
+    "argon2": "^0.44.0",
+    "compression": "^1.8.1",
+    "file-type": "^21.0.0",
+    "sharp": "0.35.5"
+  },
+  "engines": {
+    "node": ">=22.13.1"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.19",
+    "mongodb-memory-server": "^10.2.0",
+    "@playwright/test": "^1.56.0",
+    "swiper": "12.1.2",
+    "lucide": "^0.468.0"
+  },
+  "overrides": {
+    "postcss-selector-parser": "^7.1.6"
   }
 }

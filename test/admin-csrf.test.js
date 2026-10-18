@@ -47,9 +47,9 @@ test("admin CSRF handles real multipart and regular form requests", async (t) =>
     const middlewareStart = source.indexOf("\n", start) + 1;
     const middlewareEnd = source.indexOf("  async (req, res)", middlewareStart);
     assert.ok(middlewareEnd > middlewareStart);
-    const middleware = new Function("requireLogin", "upload", "requireAdminCsrf",
+    const middleware = new Function("requireLogin", "upload", "requireAdminCsrf", "rateLimit", "manageUploads", "publishUploads",
       "return [" + source.slice(middlewareStart, middlewareEnd) + "];"
-    )((req, res, next) => next(), upload, requireAdminCsrf);
+    )((req, res, next) => next(), upload, requireAdminCsrf, () => (req, res, next) => next(), (req, res, next) => next(), (req, res, next) => next());
     app.post(route, ...middleware, save);
   }
   app.post("/regular", requireAdminCsrf, save);

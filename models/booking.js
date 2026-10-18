@@ -32,12 +32,19 @@ const bookingSchema = new mongoose.Schema({
   shopName: String,
   date: String,
   time: String,
-  totalPrice: Number,
+  timeZone: { type: String, default: "Asia/Tokyo" },
+  startsAt: Date,
+  guestCount: { type: Number, min: 1 },
+  owner: { type: String, select: false },
+  requestKey: { type: String, unique: true, sparse: true },
+  requestHash: { type: String, select: false },
+  totalPrice: { type: Number, min: 0 },
   bookingCode: { type: String, unique: true, sparse: true, trim: true },
 
   // Chi tiết từng khách (Quan trọng)
   guests: [
     {
+      planId: String,
       planName: String,
       price: Number,
       guestIndex: Number, // Khách số 1, 2...
@@ -55,6 +62,8 @@ const bookingSchema = new mongoose.Schema({
   language: { type: String, default: "vi" },
 });
 
+bookingSchema.index({ archivedAt: 1, date: 1, time: 1, createdAt: -1 });
+bookingSchema.index({ shopId: 1, date: 1, status: 1, archivedAt: 1 });
 bookingSchema.index({ date: 1, time: 1, status: 1 });
 bookingSchema.index({ email: 1, createdAt: -1 });
 

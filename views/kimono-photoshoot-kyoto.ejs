@@ -8,7 +8,7 @@
 
   <main>
     <section class="relative min-h-[64vh] flex items-end overflow-hidden">
-      <img src="<%= page.heroImage %>" alt="<%= page.heroAlt %>" class="absolute inset-0 h-full w-full object-cover" fetchpriority="high" decoding="async">
+      <img src="<%= responsiveImage(page.heroImage, 800) %>" srcset="<%= responsiveImage(page.heroImage, 400) %> 400w, <%= responsiveImage(page.heroImage, 800) %> 800w" sizes="100vw" alt="<%= page.heroAlt %>" class="absolute inset-0 h-full w-full object-cover" fetchpriority="high" decoding="async">
       <div class="absolute inset-0 bg-black/50"></div>
       <div class="relative z-10 max-w-7xl mx-auto px-5 pb-14 pt-28 text-white">
         <p class="text-gold font-bold tracking-widest uppercase text-sm mb-4"><%= seoText.photoshootHeroEyebrow %></p>
@@ -49,9 +49,9 @@
 
     <section class="py-16 bg-white border-y border-gray-100">
       <div class="max-w-7xl mx-auto px-5 grid gap-6 md:grid-cols-3">
-        <img src="/img/gallery/2.jpg" alt="kimono photoshoot Kyoto street portrait" class="w-full aspect-[3/4] object-cover rounded-lg" loading="lazy" decoding="async">
-        <img src="/img/gallery/7.jpg" alt="couple kimono rental Kyoto photoshoot" class="w-full aspect-[3/4] object-cover rounded-lg" loading="lazy" decoding="async">
-        <img src="/img/gallery/8.jpg" alt="kimono rental near Kiyomizu Temple photo route" class="w-full aspect-[3/4] object-cover rounded-lg" loading="lazy" decoding="async">
+        <img src="<%= responsiveImage('/img/gallery/2.jpg', 800) %>" srcset="<%= responsiveImage('/img/gallery/2.jpg', 400) %> 400w, <%= responsiveImage('/img/gallery/2.jpg', 800) %> 800w" sizes="(max-width: 768px) 100vw, 50vw" alt="kimono photoshoot Kyoto street portrait" class="w-full aspect-[3/4] object-cover rounded-lg" loading="lazy" decoding="async">
+        <img src="<%= responsiveImage('/img/gallery/7.jpg', 800) %>" srcset="<%= responsiveImage('/img/gallery/7.jpg', 400) %> 400w, <%= responsiveImage('/img/gallery/7.jpg', 800) %> 800w" sizes="(max-width: 768px) 100vw, 50vw" alt="couple kimono rental Kyoto photoshoot" class="w-full aspect-[3/4] object-cover rounded-lg" loading="lazy" decoding="async">
+        <img src="<%= responsiveImage('/img/gallery/8.jpg', 800) %>" srcset="<%= responsiveImage('/img/gallery/8.jpg', 400) %> 400w, <%= responsiveImage('/img/gallery/8.jpg', 800) %> 800w" sizes="(max-width: 768px) 100vw, 50vw" alt="kimono rental near Kiyomizu Temple photo route" class="w-full aspect-[3/4] object-cover rounded-lg" loading="lazy" decoding="async">
       </div>
     </section>
 

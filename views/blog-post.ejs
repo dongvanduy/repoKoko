@@ -27,7 +27,7 @@
       </header>
 
       <figure class="max-w-6xl mx-auto px-5 py-10">
-        <img src="<%= post.thumbnail %>" alt="<%= post.thumbnailAlt %>" class="w-full max-h-[620px] object-cover rounded-lg shadow-lg" fetchpriority="high" decoding="async">
+        <img src="<%= responsiveImage(post.thumbnail, 800) %>" srcset="<%= responsiveImage(post.thumbnail, 400) %> 400w, <%= responsiveImage(post.thumbnail, 800) %> 800w" sizes="(max-width: 768px) 100vw, 50vw" alt="<%= post.thumbnailAlt %>" class="w-full max-h-[620px] object-cover rounded-lg shadow-lg" fetchpriority="high" decoding="async">
       </figure>
 
       <div class="max-w-6xl mx-auto px-5 pb-16 md:pb-24 grid gap-10 lg:grid-cols-[260px_1fr]">
@@ -108,7 +108,7 @@
         <div class="grid gap-6 md:grid-cols-3">
           <% relatedPosts.forEach((related) => { %>
             <article class="rounded-lg border border-gray-100 bg-bgBase overflow-hidden shadow-sm">
-              <img src="<%= related.thumbnail %>" alt="<%= related.thumbnailAlt %>" class="h-56 w-full object-cover" loading="lazy" decoding="async">
+              <img src="<%= responsiveImage(related.thumbnail, 800) %>" srcset="<%= responsiveImage(related.thumbnail, 400) %> 400w, <%= responsiveImage(related.thumbnail, 800) %> 800w" sizes="(max-width: 768px) 100vw, 50vw" alt="<%= related.thumbnailAlt %>" class="h-56 w-full object-cover" loading="lazy" decoding="async">
               <div class="p-5">
                 <time datetime="<%= related.date %>" class="text-xs font-bold uppercase tracking-widest text-sub1"><%= related.date %></time>
                 <h3 class="mt-2 text-xl font-bold leading-snug"><a href="/blog/<%= related.slug %>" class="hover:text-accent"><%= related.title %></a></h3>

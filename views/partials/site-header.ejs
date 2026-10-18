@@ -1,7 +1,7 @@
 <header class="sticky top-0 z-50 bg-[#EFE5E3]/95 backdrop-blur border-b border-black/5 shadow-sm">
   <div class="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between gap-4">
     <a href="/" class="h-14 flex items-center shrink-0" aria-label="Kokoro Kimono Rental home">
-      <img src="/img/common/logo.svg" alt="Kokoro Kimono Rental Kyoto logo" class="h-full w-auto object-contain">
+      <img src="<%= asset('logo-320.webp') %>" srcset="<%= asset('logo-320.webp') %> 1x, <%= asset('logo-640.webp') %> 2x" alt="Kokoro Kimono Rental Kyoto logo" class="h-full w-auto object-contain">
     </a>
     <nav class="hidden lg:flex items-center gap-6 text-sm font-bold text-main">
       <a href="/kimono-rental-kyoto" class="hover:text-accent transition"><%= seoText.navRental %></a>

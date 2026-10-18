@@ -1,4 +1,4 @@
-const siteUrl = "https://kokorokimono.com";
+const siteUrl = process.env.SITE_URL || "https://kokorokimono.com";
 const defaultSeoImage = "/img/gallery/1.jpg";
 
 const seoLabels = {

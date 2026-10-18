@@ -4,7 +4,7 @@ const plans = [
         id: 1,
         img: '/img/gallery/1.jpg',
         title: 'plans.basic.title', // Sửa thành key
-        price: '3,000 JPY',
+        price: 3000,
         desc: 'plans.basic.desc',   // Sửa thành key
         features: ['Simple design', 'Quick dressing', 'Hair set included']
     },
@@ -12,7 +12,7 @@ const plans = [
         id: 2,
         img: '/img/gallery/2.jpg',
         title: 'plans.couple.title', // Sửa thành key
-        price: '5,500 JPY',
+        price: 5500,
         desc: 'plans.couple.desc',   // Sửa thành key
         features: ['For couples', 'Men & Women sets', 'Photo service']
     },

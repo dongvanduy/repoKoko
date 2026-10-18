@@ -1,6 +1,4 @@
-require("dotenv").config();
-const cron = require("node-cron");
-const translate = require("google-translate-api-x");
+require("dotenv").config({ quiet: true });
 const express = require("express");
 const mongoose = require("mongoose");
 const session = require("express-session");
@@ -8,11 +6,8 @@ const i18n = require("i18n");
 const cookieParser = require("cookie-parser");
 const path = require("path");
 const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
-const multer = require("multer");
-const nodemailer = require("nodemailer");
 const crypto = require("crypto");
-const { requireAdminCsrf, adminUploadFileFilter } = require("./middleware/admin-csrf");
+const { requireAdminCsrf } = require("./middleware/admin-csrf");
 
 // Import Models
 const Booking = require("./models/booking");
@@ -40,7 +35,22 @@ const {
   getRelatedPosts,
 } = require("./seo-content");
 
+const MongoStore = require("connect-mongo");
+const compression = require("compression");
+const { headers, csrfToken, rateLimit } = require("./middleware/security");
+const { upload, manageUploads, publishUploads } = require("./middleware/uploads");
+const BookingService = require("./services/bookings");
+const { localizeSeoObject } = require("./services/seo");
+const { initialText } = require("./services/translations");
+const Job = require("./models/Job");
+const { AppError } = require("./lib/errors");
+const { text, integer, safeImageUrl, jsonForHtml } = require("./lib/validation");
+const { messages, errorMessage } = require("./lib/messages");
+const { tokyoDate, validDate } = require("./lib/time");
+const { asset, responsiveImage } = require("./lib/assets");
+const { validateConfig } = require("./lib/config");
 const app = express();
+app.disable("x-powered-by");
 
 mongoose.set("bufferCommands", false);
 
@@ -53,9 +63,9 @@ const getVisiblePlans = async () => {
   if (!isDbConnected()) return initialPlans.filter((plan) => plan.isVisible !== false);
 
   try {
-    return await Plan.find({ isVisible: true });
+    return await Plan.find({ isVisible: true }).lean();
   } catch (err) {
-    console.error("⚠️ Không thể tải plans từ DB, dùng dữ liệu tĩnh:", err.message);
+    console.error(JSON.stringify({ event: "request_error" }));
     return initialPlans.filter((plan) => plan.isVisible !== false);
   }
 };
@@ -64,9 +74,9 @@ const getAllPlans = async () => {
   if (!isDbConnected()) return initialPlans;
 
   try {
-    return await Plan.find();
+    return await Plan.find().lean();
   } catch (err) {
-    console.error("⚠️ Không thể tải toàn bộ plans từ DB, dùng dữ liệu tĩnh:", err.message);
+    console.error(JSON.stringify({ event: "request_error" }));
     return initialPlans;
   }
 };
@@ -89,7 +99,7 @@ const getHeroImages = async () => {
 
     return [heroConfig.value];
   } catch (err) {
-    console.error("⚠️ Không thể tải hero image từ DB, dùng ảnh mặc định:", err.message);
+    console.error(JSON.stringify({ event: "request_error" }));
     return [DEFAULT_HERO_IMAGE];
   }
 };
@@ -100,8 +110,7 @@ const absoluteUrl = (value = "/") => {
   return `${siteUrl}${value.startsWith("/") ? value : `/${value}`}`;
 };
 
-const escapeJsonForHtml = (data) =>
-  JSON.stringify(data).replace(/</g, "\\u003c");
+const escapeJsonForHtml = jsonForHtml;
 
 const buildSeo = ({
   title,
@@ -205,194 +214,8 @@ const buildArticleSchema = (post) => ({
   mainEntityOfPage: absoluteUrl(`/blog/${post.slug}`),
 });
 
-const SEO_TRANSLATE_TARGETS = {
-  vi: "vi",
-  en: "en",
-  jp: "ja",
-  zh: "zh-CN",
-};
-
-const SEO_SKIP_TRANSLATION_KEYS = new Set([
-  "slug",
-  "path",
-  "date",
-  "thumbnail",
-  "heroImage",
-  "image",
-  "url",
-]);
-
-const seoTranslationCache = new Map();
-const seoObjectCache = new Map();
-
-const getSeoLocale = (req) => {
-  const locale = req.getLocale();
-  return Object.prototype.hasOwnProperty.call(SEO_TRANSLATE_TARGETS, locale)
-    ? locale
-    : "en";
-};
-
-const translateSeoText = async (text, locale, timeoutMs = 8000) => {
-  if (!text || locale === "en" || !SEO_TRANSLATE_TARGETS[locale]) return text;
-
-  const cacheKey = `${locale}:${text}`;
-  if (seoTranslationCache.has(cacheKey)) return seoTranslationCache.get(cacheKey);
-
-  try {
-    const result = await Promise.race([
-      translate(text, { from: "en", to: SEO_TRANSLATE_TARGETS[locale] }),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("SEO translation timeout")), timeoutMs),
-      ),
-    ]);
-    const translatedText = result?.text || text;
-    seoTranslationCache.set(cacheKey, translatedText);
-    return translatedText;
-  } catch (err) {
-    console.error(
-      `⚠️ Không thể dịch SEO content sang ${locale}, dùng fallback English:`,
-      err.message,
-    );
-    return text;
-  }
-};
-
-const collectSeoStrings = (value, entries, key = "") => {
-  if (typeof value === "string") {
-    if (!SEO_SKIP_TRANSLATION_KEYS.has(key) && value.trim()) {
-      entries.push({ value });
-    }
-    return;
-  }
-
-  if (Array.isArray(value)) {
-    value.forEach((item) => collectSeoStrings(item, entries, key));
-    return;
-  }
-
-  if (value && typeof value === "object") {
-    Object.entries(value).forEach(([childKey, childValue]) => {
-      collectSeoStrings(childValue, entries, childKey);
-    });
-  }
-};
-
-const applySeoStrings = (value, translatedValues, cursor, key = "") => {
-  if (typeof value === "string") {
-    if (!SEO_SKIP_TRANSLATION_KEYS.has(key) && value.trim()) {
-      const translatedValue = translatedValues[cursor.index];
-      cursor.index += 1;
-      return translatedValue || value;
-    }
-    return value;
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item) => applySeoStrings(item, translatedValues, cursor, key));
-  }
-
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([childKey, childValue]) => [
-        childKey,
-        applySeoStrings(childValue, translatedValues, cursor, childKey),
-      ]),
-    );
-  }
-
-  return value;
-};
-
-const translateSeoObjectBatch = async (value, locale) => {
-  if (locale === "en") return value;
-
-  const entries = [];
-  collectSeoStrings(value, entries);
-  if (entries.length === 0) return value;
-
-  const delimiter = "__KOKORO_SEO_SPLIT__";
-  const sourceText = entries.map((entry) => entry.value).join(`\n${delimiter}\n`);
-  const translatedText = await translateSeoText(sourceText, locale, 12000);
-
-  if (translatedText === sourceText) return localizeSeoValue(value, locale);
-
-  const translatedValues = translatedText
-    .split(delimiter)
-    .map((item) => item.trim());
-
-  if (translatedValues.length !== entries.length) {
-    console.error(
-      `⚠️ Bản dịch SEO ${locale} không khớp số đoạn, dùng fallback English.`,
-    );
-    return localizeSeoValue(value, locale);
-  }
-
-  return applySeoStrings(value, translatedValues, { index: 0 });
-};
-
-const localizeSeoValue = async (value, locale, key = "") => {
-  if (typeof value === "string") {
-    return SEO_SKIP_TRANSLATION_KEYS.has(key)
-      ? value
-      : translateSeoText(value, locale);
-  }
-
-  if (Array.isArray(value)) {
-    return Promise.all(value.map((item) => localizeSeoValue(item, locale, key)));
-  }
-
-  if (value && typeof value === "object") {
-    const translatedEntries = await Promise.all(
-      Object.entries(value).map(async ([childKey, childValue]) => [
-        childKey,
-        await localizeSeoValue(childValue, locale, childKey),
-      ]),
-    );
-    return Object.fromEntries(translatedEntries);
-  }
-
-  return value;
-};
-
-const localizeSeoObject = async (cacheKey, locale, value) => {
-  if (locale === "en") return value;
-
-  const fullCacheKey = `${locale}:${cacheKey}`;
-  if (seoObjectCache.has(fullCacheKey)) return seoObjectCache.get(fullCacheKey);
-
-  const translatedValue = await translateSeoObjectBatch(value, locale);
-  seoObjectCache.set(fullCacheKey, translatedValue);
-  return translatedValue;
-};
-
-const localizeSeoObjectSegmented = async (cacheKey, locale, value) => {
-  if (locale === "en") return value;
-
-  const fullCacheKey = `${locale}:${cacheKey}:segmented`;
-  if (seoObjectCache.has(fullCacheKey)) return seoObjectCache.get(fullCacheKey);
-
-  const translatedValue = await localizeSeoValue(value, locale);
-  seoObjectCache.set(fullCacheKey, translatedValue);
-  return translatedValue;
-};
-
-const toBlogSummary = (post) => {
-  const { sections, faq, ...summary } = post;
-  return summary;
-};
-
-const localizeBlogSummaries = async (locale, posts = blogPosts) => {
-  const summaries = [];
-  for (const post of posts) {
-    const localizedSummary = await localizeSeoObject(
-      `blog-summary:${post.slug}`,
-      locale,
-      toBlogSummary(post),
-    );
-    summaries.push(applyPostLocaleOverride(localizedSummary, locale));
-  }
-  return summaries;
-};
+const getSeoLocale = req => ["vi", "en", "jp", "zh"].includes(req.getLocale()) ? req.getLocale() : "en";
+const localizeSeoObjectSegmented = localizeSeoObject;
 
 const getLocalizedField = (field, locale) => {
   if (!field) return "";
@@ -489,39 +312,6 @@ const parseBlogFaq = (faqText) =>
     })
     .filter((item) => item.question && item.answer);
 
-const translateBlogSectionsToAllLanguages = async (sections) => {
-  const translatedSections = [];
-
-  for (const section of sections) {
-    const translatedHeading = await translateDescToAllLanguages(section.heading);
-    const translatedParagraphs = [];
-
-    for (const paragraph of section.paragraphs) {
-      translatedParagraphs.push(await translateDescToAllLanguages(paragraph));
-    }
-
-    translatedSections.push({
-      heading: translatedHeading,
-      paragraphs: translatedParagraphs,
-    });
-  }
-
-  return translatedSections;
-};
-
-const translateBlogFaqToAllLanguages = async (faqItems) => {
-  const translatedFaq = [];
-
-  for (const item of faqItems) {
-    translatedFaq.push({
-      question: await translateDescToAllLanguages(item.question),
-      answer: await translateDescToAllLanguages(item.answer),
-    });
-  }
-
-  return translatedFaq;
-};
-
 const normalizeDbBlogPost = (post, locale) => {
   const postObject = typeof post.toObject === "function" ? post.toObject() : post;
   const title = getLocalizedField(postObject.title, locale);
@@ -584,7 +374,7 @@ const getPublicBlogPosts = async (locale) => {
       ...staticPosts.filter((post) => !dbSlugs.has(post.slug)),
     ];
   } catch (err) {
-    console.error("⚠️ Không thể tải blog từ DB, dùng bài mẫu:", err.message);
+    console.error(JSON.stringify({ event: "request_error" }));
     return staticPosts;
   }
 };
@@ -595,102 +385,28 @@ const getAdminBlogPosts = async () => {
   try {
     return await BlogPost.find().sort({ createdAt: -1 }).lean();
   } catch (err) {
-    console.error("⚠️ Không thể tải blog admin:", err.message);
+    console.error(JSON.stringify({ event: "request_error" }));
     return [];
   }
 };
 
-// --- KẾT NỐI MONGODB ---
-mongoose
-  .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 })
-  .then(async () => {
-    console.log("✅ Đã kết nối MongoDB!");
-
-    // Seed Data nếu DB trống
-    const planCount = await Plan.countDocuments();
-    if (planCount === 0) {
-      await Plan.insertMany(initialPlans);
-      console.log("📦 Đã khởi tạo dữ liệu gói dịch vụ");
-    }
-
-    const heroImg = await Config.findOne({ key: "hero_image" });
-    if (!heroImg) {
-      await Config.create({
-        key: "hero_image",
-        value: DEFAULT_HERO_IMAGE,
-      });
-    }
-  })
-  .catch((err) => console.error("❌ Lỗi DB:", err));
-
-// --- CẤU HÌNH CLOUDINARY & MULTER (UPLOAD ẢNH) ---
+// External services are configured here but connected only in start().
 cloudinary.config({
-  cloud_name: "dgpfqmncu",
-  api_key: "324438863362332",
-  // 👇👇👇 QUAN TRỌNG: BẠN PHẢI ĐIỀN API SECRET THẬT VÀO DƯỚI ĐÂY 👇👇👇
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dgpfqmncu",
+  api_key: process.env.CLOUDINARY_API_KEY || "324438863362332",
   api_secret: process.env.CLOUDINARY_SECRET,
 });
-
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: "kokoro_shop",
-    allowed_formats: ["jpg", "png", "webp", "jpeg"],
-  },
-});
-
-const upload = multer({ storage: storage, fileFilter: adminUploadFileFilter });
-
-const LANGUAGE_CODES = {
-  vi: "vi",
-  en: "en",
-  jp: "ja",
-  zh: "zh-CN",
-};
-
-const resolveLanguageKey = (isoCode) => {
-  const normalized = (isoCode || "").toLowerCase();
-  if (normalized.startsWith("en")) return "en";
-  if (normalized.startsWith("ja") || normalized.startsWith("jp")) return "jp";
-  if (normalized.startsWith("zh")) return "zh";
-  if (normalized.startsWith("vi")) return "vi";
-  return "vi";
-};
 
 const normalizeEnv = (value) => {
   if (typeof value !== "string") return "";
   return value.trim();
 };
 
-const BOOKING_STATUSES = [
-  "Mới",
-  "Đã xác nhận",
-  "Đã đến",
-  "Hoàn tất",
-  "Đã hủy",
-];
-
+const BOOKING_STATUSES = BookingService.STATUSES;
 const LEGACY_BOOKING_STATUS = "Đã đặt (Chờ đến)";
-const ACTIVE_BOOKING_STATUSES = [
-  "Mới",
-  LEGACY_BOOKING_STATUS,
-  "Đã xác nhận",
-  "Đã đến",
-];
-
-const getTokyoDate = () =>
-  new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
-
-const getBookingGuestCount = (booking) =>
-  Array.isArray(booking.guests) && booking.guests.length > 0
-    ? booking.guests.length
-    : 1;
-
-const createBookingCode = () => {
-  const day = getTokyoDate().replaceAll("-", "").slice(2);
-  const token = crypto.randomBytes(3).toString("hex").toUpperCase();
-  return `KK-${day}-${token}`;
-};
+const ACTIVE_BOOKING_STATUSES = BookingService.ACTIVE;
+const getTokyoDate = tokyoDate;
+const getBookingGuestCount = BookingService.guestCount;
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -699,7 +415,7 @@ const getAdminBookingFilter = (query = {}) => {
     query.archived === "1" ? { archivedAt: { $ne: null } } : { archivedAt: null };
   const status = normalizeEnv(query.status);
   const date = normalizeEnv(query.date);
-  const search = normalizeEnv(query.q);
+  const search = normalizeEnv(query.q).slice(0, 120);
 
   if (BOOKING_STATUSES.includes(status) || status === LEGACY_BOOKING_STATUS) {
     filter.status = status;
@@ -729,255 +445,40 @@ const adminRedirect = (notice, tab = "bookings") => {
   return `/admin${query ? `?${query}` : ""}#tab-${tab}`;
 };
 
-const parseSecureFlag = (value) => {
-  const normalized = normalizeEnv(value).toLowerCase();
-  return normalized === "true" || normalized === "1" || normalized === "yes";
-};
-
-const ADMIN_EMAIL = normalizeEnv(process.env.ADMIN_EMAIL);
-
-const createMailTransporter = () => {
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE } =
-    process.env;
-  const host = normalizeEnv(SMTP_HOST);
-  const port = Number(normalizeEnv(SMTP_PORT));
-  const user = normalizeEnv(SMTP_USER);
-  const pass = normalizeEnv(SMTP_PASS);
-
-  if (!host || !port || !user || !pass) {
-    return null;
-  }
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: parseSecureFlag(SMTP_SECURE),
-    auth: {
-      user,
-      pass,
-    },
-  });
-};
-
-// Tự điển đa ngôn ngữ cho Email
-const emailDict = {
-  vi: {
-    subject: "Xác nhận đặt lịch tại Kokoro",
-    hello: "Xin chào",
-    thanks:
-      "Cảm ơn bạn đã đặt lịch tại Kokoro. Dưới đây là thông tin đặt lịch của bạn:",
-    customer: "Khách hàng",
-    phone: "Số điện thoại",
-    shop: "Cửa hàng",
-    datetime: "Ngày/giờ",
-    total: "Tổng tiền",
-    plan: "Gói đã chọn",
-    footer:
-      "Chúng tôi sẽ liên hệ nếu cần thêm thông tin. Hẹn gặp bạn tại cửa hàng!",
-  },
-  en: {
-    subject: "Booking Confirmation at Kokoro",
-    hello: "Hello",
-    thanks: "Thank you for booking with Kokoro. Here are your booking details:",
-    customer: "Customer",
-    phone: "Phone number",
-    shop: "Shop",
-    datetime: "Date/Time",
-    total: "Total Price",
-    plan: "Selected Plans",
-    footer:
-      "We will contact you if more information is needed. See you at the shop!",
-  },
-  jp: {
-    subject: "Kokoroでのご予約確認",
-    hello: "こんにちは",
-    thanks:
-      "Kokoroでのご予約ありがとうございます。ご予約内容は以下の通りです：",
-    customer: "お客様",
-    phone: "電話番号",
-    shop: "店舗",
-    datetime: "日時",
-    total: "合計金額",
-    plan: "選択したプラン",
-    footer:
-      "必要に応じてご連絡させていただきます。ご来店をお待ちしております！",
-  },
-  zh: {
-    subject: "Kokoro 预约确认",
-    hello: "你好",
-    thanks: "感谢您在 Kokoro 预约。以下是您的预约详情：",
-    customer: "客户",
-    phone: "电话号码",
-    shop: "商店",
-    datetime: "日期/时间",
-    total: "总价",
-    plan: "已选套餐",
-    footer: "如果需要更多信息，我们会与您联系。期待在店里见到您！",
-  },
-};
-
-const buildBookingEmailHtml = ({ booking, shop, plansData, lang }) => {
-  const t = emailDict[lang] || emailDict["en"]; // Fallback về tiếng Việt
-  const planLines = plansData
-    .map((plan) => `<li>${plan.title} x ${plan.qty}</li>`)
-    .join("");
-
-  return `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <p>${t.hello} <strong>${booking.fullname}</strong>,</p>
-            <p>${t.thanks}</p>
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <p><strong>${t.customer}:</strong> ${booking.fullname}</p>
-                <p><strong>${t.phone}:</strong> ${booking.phone}</p>
-                <p><strong>${t.shop}:</strong> ${shop.name}</p>
-                <p><strong>${t.datetime}:</strong> ${booking.date} | ${booking.time}</p>
-                <p><strong>${t.total}:</strong> ¥${booking.totalPrice.toLocaleString()}</p>
-                <h3>${t.plan}</h3>
-                <ul>${planLines}</ul>
-            </div>
-            <p>${t.footer}</p>
-        </div>
-    `;
-};
-
-const buildAdminBookingEmailHtml = ({ booking, shop, plansData }) => {
-  const planLines = plansData
-    .map((plan) => `<li>${plan.title} x ${plan.qty}</li>`)
-    .join("");
-
-  return `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <h2 style="margin-bottom: 8px; color: #BA2636;">🔔 Thông báo đơn hàng mới</h2>
-            <p>Hệ thống vừa ghi nhận một đơn hàng mới. Vui lòng kiểm tra thông tin bên dưới:</p>
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <p><strong>Khách hàng:</strong> ${booking.fullname}</p>
-                <p><strong>Số điện thoại:</strong> ${booking.phone}</p>
-                <p><strong>Email:</strong> ${booking.email || "Không có"}</p>
-                <p><strong>Cửa hàng:</strong> ${shop.name}</p>
-                <p><strong>Ngày/giờ:</strong> ${booking.date} | ${booking.time}</p>
-                <p><strong>Tổng tiền:</strong> ¥${booking.totalPrice.toLocaleString()}</p>
-                <h3>Gói đã chọn</h3>
-                <ul>${planLines}</ul>
-            </div>
-            <p>Vui lòng sắp xếp lịch và xác nhận với khách nếu cần.</p>
-        </div>
-    `;
-};
-
-const sendBookingEmails = async ({ booking, shop, plansData, lang }) => {
-  const transporter = createMailTransporter();
-  if (!transporter) return;
-
-  const t = emailDict[lang] || emailDict["en"];
-  const htmlContent = buildBookingEmailHtml({ booking, shop, plansData, lang });
-
-  const senderEmail = normalizeEnv(process.env.MAIL_FROM) || normalizeEnv(process.env.SMTP_USER);
-  if (!senderEmail) {
-    throw new Error("Thiếu MAIL_FROM hoặc SMTP_USER để gửi email");
-  }
-
-  // Mail gửi khách hàng (Bằng ngôn ngữ của khách)
-  const customerMail = {
-    from: `"Kokoro Booking" <${senderEmail}>`,
-    to: booking.email,
-    subject: t.subject,
-    html: htmlContent,
-  };
-
-  // Mail gửi Admin (Luôn giữ tiếng Việt cho Admin dễ đọc)
-  const adminMail = {
-    from: `"Kokoro Booking" <${senderEmail}>`,
-    to: ADMIN_EMAIL,
-    subject: `[Đơn hàng mới] ${booking.fullname} - ${shop.name}`,
-    html: buildAdminBookingEmailHtml({ booking, shop, plansData }),
-  };
-
-  const emailPromises = [transporter.sendMail(customerMail)];
-  if (ADMIN_EMAIL) {
-    emailPromises.push(transporter.sendMail(adminMail));
-  }
-
-  const results = await Promise.allSettled(emailPromises);
-  const rejected = results.find((result) => result.status === "rejected");
-  if (rejected) {
-    throw rejected.reason;
-  }
-};
-
-const translateDescToAllLanguages = async (desc) => {
-  const multiLangDesc = { vi: "", en: "", jp: "", zh: "" };
-  if (!desc) {
-    return multiLangDesc;
-  }
-
-  let detectedKey = "vi";
-  let detectedEnglishText = "";
-
-  try {
-    const detectResult = await translate(desc, { to: "en" });
-    detectedKey = resolveLanguageKey(detectResult?.from?.language?.iso);
-    detectedEnglishText = detectResult?.text || "";
-  } catch (err) {
-    console.error("⚠️ Lỗi nhận diện ngôn ngữ:", err.message);
-  }
-
-  multiLangDesc[detectedKey] = desc;
-  if (detectedKey === "en") {
-    multiLangDesc.en = desc;
-  } else if (detectedEnglishText) {
-    multiLangDesc.en = detectedEnglishText;
-  }
-
-  const sourceLang = LANGUAGE_CODES[detectedKey];
-  const translationTargets = Object.keys(LANGUAGE_CODES).filter(
-    (key) => key !== detectedKey && key !== "en",
-  );
-
-  try {
-    const translations = await Promise.all(
-      translationTargets.map((targetKey) =>
-        translate(desc, {
-          from: sourceLang,
-          to: LANGUAGE_CODES[targetKey],
-        }).then((result) => ({ key: targetKey, text: result.text })),
-      ),
-    );
-
-    translations.forEach(({ key, text }) => {
-      multiLangDesc[key] = text;
-    });
-
-    if (!multiLangDesc.en) {
-      multiLangDesc.en = desc;
-    }
-  } catch (err) {
-    console.error("⚠️ Lỗi dịch thuật:", err.message);
-    return {
-      vi: desc,
-      en: desc,
-      jp: desc,
-      zh: desc,
-    };
-  }
-
-  return multiLangDesc;
-};
-
 // --- CẤU HÌNH APP ---
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
-app.use(express.static(path.join(__dirname, "public")));
-app.use(express.urlencoded({ extended: true }));
-
-// Cấu hình Session
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "secret_key",
-    resave: false,
-    saveUninitialized: true,
-    cookie: { maxAge: 60 * 60 * 8000 },
-  }),
-);
+app.set("trust proxy", process.env.TRUST_PROXY ? process.env.TRUST_PROXY.split(",").map(s => s.trim()) : false);
+app.use(...headers());
+app.use(compression());
+app.get("/health", (req, res) => res.status(isDbConnected() ? 200 : 503).json({ ok: isDbConnected() }));
+app.use("/assets", express.static(path.join(__dirname, "public/assets"), { maxAge: "1y", immutable: true }));
+app.use(express.static(path.join(__dirname, "public"), { maxAge: "1h" }));
+app.use(express.urlencoded({ extended: true, limit: "100kb", parameterLimit: 200, depth: 3 }));
+let sessionMiddleware;
+app.use((req, res, next) => {
+  if (!isDbConnected()) return next(new AppError(503, "service_unavailable"));
+  if (!sessionMiddleware) {
+    const store = MongoStore.create({ client: mongoose.connection.getClient(), dbName: mongoose.connection.name, ttl: 8 * 3600, touchAfter: 300 });
+    store.on("error", () => console.error(JSON.stringify({ event: "session_store_error" })));
+    app.locals.sessionStore = store;
+    sessionMiddleware = session({
+      name: "kokoro.sid", secret: process.env.SESSION_SECRET,
+      store, resave: false, saveUninitialized: false,
+      cookie: { maxAge: 8 * 3600000, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" },
+    });
+  }
+  sessionMiddleware(req, res, next);
+});
+app.use((req, res, next) => {
+  const started = performance.now();
+  res.on("finish", () => {
+    if (res.statusCode >= 400 || performance.now() - started > 1000) {
+      console.log(JSON.stringify({ event: "request", method: req.method, route: req.route?.path || "unknown", status: res.statusCode, ms: Math.round(performance.now() - started) }));
+    }
+  });
+  next();
+});
 
 // Cấu hình i18n
 i18n.configure({
@@ -987,7 +488,7 @@ i18n.configure({
   cookie: "lang",
   queryParameter: "lang",
   objectNotation: true,
-  autoReload: true,
+  autoReload: process.env.NODE_ENV === "development",
   updateFiles: false,
 });
 
@@ -998,6 +499,8 @@ app.use((req, res, next) => {
   res.locals.siteUrl = siteUrl;
   res.locals.absoluteUrl = absoluteUrl;
   res.locals.jsonLd = escapeJsonForHtml;
+  res.locals.asset = asset;
+  res.locals.responsiveImage = responsiveImage;
   next();
 });
 
@@ -1015,6 +518,8 @@ app.use((req, res, next) => {
 
   const currentLocale = req.getLocale();
   res.locals.locale = currentLocale;
+  res.locals.ui = messages(currentLocale);
+  res.locals.formCsrf = () => csrfToken(req);
 
   // 1. Helper: Chuyển đổi và format giá tiền theo ngôn ngữ
   res.locals.formatPrice = (price) => {
@@ -1064,7 +569,8 @@ app.use((req, res, next) => {
 
 // Middleware Bảo vệ Admin
 const requireLogin = (req, res, next) => {
-  if (req.session.isAdmin) {
+  if (req.session?.isAdmin) {
+    res.set("Cache-Control", "no-store");
     next();
   } else {
     res.redirect("/login");
@@ -1096,9 +602,7 @@ app.get("/", async (req, res) => {
     metaTitle: seoText.landingTitle,
     metaDescription: seoText.landingMetaDescription,
   };
-  const dbPlans = await getVisiblePlans();
-  const heroImages = await getHeroImages();
-  const publicBlogPosts = await getPublicBlogPosts(locale);
+  const [dbPlans, heroImages, publicBlogPosts] = await Promise.all([getVisiblePlans(), getHeroImages(), getPublicBlogPosts(locale)]);
   const seo = buildSeo({
     title: seoText.landingTitle,
     description: seoText.landingMetaDescription,
@@ -1311,361 +815,23 @@ app.get("/change-lang/:lang", (req, res) => {
   if (["vi", "en", "jp", "zh"].includes(lang)) {
     res.cookie("lang", lang, { maxAge: 90000000, httpOnly: true });
   }
-  const fallbackUrl = req.get("Referrer") || "/";
+  let fallbackUrl = "/";
+  try {
+    const ref = new URL(req.get("Referrer"), siteUrl);
+    if (ref.origin === new URL(siteUrl).origin) { ref.searchParams.delete("lang"); fallbackUrl = ref.pathname + ref.search + ref.hash; }
+  } catch {}
   res.redirect(fallbackUrl);
 });
 
-// 2. Trang chi tiết
-app.get("/plan/:id", async (req, res) => {
-  if (!isDbConnected()) {
-    const staticPlan = initialPlans.find(
-      (plan) => String(plan.id) === String(req.params.id),
-    );
-
-    if (!staticPlan) return res.send("Không tìm thấy gói!");
-    return res.render("detail", { plan: staticPlan, pageTitle: staticPlan.title });
-  }
-
-  // Tìm trong DB thay vì mảng tĩnh
-  // Lưu ý: Nếu data cũ dùng id số (1,2,3), nếu data mới tạo tự động bởi mongo sẽ dùng _id
-  // Code này ưu tiên tìm theo id số trước
-  let foundPlan = await Plan.findOne({ id: parseInt(req.params.id) });
-  if (!foundPlan) {
-    try {
-      foundPlan = await Plan.findById(req.params.id);
-    } catch (e) {}
-  }
-
-  if (!foundPlan) return res.send("Không tìm thấy gói!");
-  res.render("detail", { plan: foundPlan, pageTitle: foundPlan.title });
-});
-
-// 2.1 Booking nhanh từ trang chi tiết
-app.post("/booking", async (req, res) => {
-  try {
-    const { planId, planName, fullname, email, date, time, quantity, phone, shopId } =
-      req.body;
-    const qty = Math.max(parseInt(quantity, 10) || 1, 1);
-
-    let foundPlan = null;
-    if (planId) {
-      foundPlan = await Plan.findById(planId).catch(() => null);
-    }
-
-    if (!foundPlan && planId) {
-      foundPlan = await Plan.findOne({ id: parseInt(planId, 10) });
-    }
-
-    if (!foundPlan) {
-      return res.status(404).send("Không tìm thấy gói!");
-    }
-
-    const shop = shops.find((s) => s.id == shopId) || shops[0];
-    const planPrice = Number(foundPlan.price) || 0;
-    const totalPrice = planPrice * qty;
-
-    const currentLang = req.getLocale();
-    const planTitleStr =
-      foundPlan.title && typeof foundPlan.title === "object"
-        ? foundPlan.title[currentLang] || foundPlan.title.vi || ""
-        : foundPlan.title;
-    const resolvedPlanName = planName || planTitleStr;
-
-    const guests = Array.from({ length: qty }, (_, index) => ({
-      planName: resolvedPlanName,
-      price: planPrice,
-      guestIndex: index + 1,
-      selectedOptions: [],
-    }));
-
-    const newBooking = new Booking({
-      fullname,
-      email,
-      phone,
-      planName: resolvedPlanName,
-      shopId: shop.id,
-      shopName: shop.name,
-      date,
-      time,
-      totalPrice,
-      guests,
-      bookingCode: createBookingCode(),
-      status: "Mới",
-      statusHistory: [
-        {
-          to: "Mới",
-          note: "Đơn được tạo từ website.",
-          changedBy: "Website",
-        },
-      ],
-    });
-
-    await newBooking.save();
-    res.render("success", {
-      info: { fullname, planName: resolvedPlanName, date, time },
-    });
-  } catch (err) {
-    console.error(err);
-    res.send("Lỗi xử lý đơn hàng: " + err.message);
-  }
-});
-
-// 3. Booking Step 1
-app.get("/booking-step1", async (req, res) => {
-  const dbPlans = await getVisiblePlans();
-  res.render("booking_step1", {
-    plans: dbPlans,
-    pageTitle: res.__("titles.booking_step1"),
-  });
-});
-
-// 4. Booking Step 2 (ĐÃ SỬA LỖI)
-app.post("/booking-step2", async (req, res) => {
-  const selectedPlans = [];
-  let totalQuantity = 0;
-  let totalPrice = 0;
-
-  // 👇 FIX: Lấy danh sách gói từ DB để tra cứu giá tiền
-  const dbPlans = await getAllPlans();
-
-  for (const [key, value] of Object.entries(req.body)) {
-    if (key.startsWith("plan_") && parseInt(value) > 0) {
-      // Lấy ID từ key (plan_1 -> 1) hoặc (plan_659abc... -> 659abc...)
-      const rawId = key.replace("plan_", "");
-      const qty = parseInt(value);
-
-      // Tìm gói trong DB
-      // So sánh id (số) HOẶC _id (chuỗi mongo)
-      const foundPlan = dbPlans.find(
-        (p) => p.id == rawId || p._id.toString() == rawId,
-      );
-
-      if (foundPlan) {
-        // Lấy tên gói theo ngôn ngữ khách đang dùng
-        const currentLang = req.getLocale();
-        const planTitleStr =
-          foundPlan.title && typeof foundPlan.title === "object"
-            ? foundPlan.title[currentLang] || foundPlan.title.vi || ""
-            : foundPlan.title;
-
-        selectedPlans.push({
-          id: foundPlan.id || foundPlan._id,
-          title: planTitleStr, // 👈 Đẩy chuỗi ngôn ngữ vào giỏ
-          price: foundPlan.price,
-          image: foundPlan.image,
-          qty: qty,
-          subTotal: foundPlan.price * qty,
-        });
-        totalQuantity += qty;
-        totalPrice += foundPlan.price * qty;
-      }
-    }
-  }
-
-  if (selectedPlans.length === 0) {
-    return res.send(
-      `<script>alert('${res.__("booking.step1.validation_no_plan")}'); window.history.back();</script>`,
-    );
-  }
-
-  res.render("booking_step2", {
-    selectedPlans: selectedPlans,
-    totalQuantity: totalQuantity,
-    totalPrice: totalPrice,
-    shop: shops[0],
-    pageTitle: res.__("titles.booking_step2"),
-  });
-});
-
-// server.js
-const { timeSlots } = require("./data"); // Đảm bảo data.js có mảng timeSlots như bài trước
-
-app.get("/api/available-slots", async (req, res) => {
-  try {
-    const { date, shopId, totalQuantity } = req.query;
-    const targetQty = parseInt(totalQuantity) || 1;
-
-    // Tìm tất cả đơn hàng trong ngày tại shop đó
-    const bookings = await Booking.find({
-      date,
-      shopId,
-      archivedAt: null,
-      status: { $in: ACTIVE_BOOKING_STATUSES },
-    });
-
-    const results = timeSlots.map((slot) => {
-      // Tính tổng số khách đã đặt vào khung giờ này
-      const bookedCount = bookings
-        .filter((b) => b.time === slot.time)
-        .reduce((sum, b) => sum + getBookingGuestCount(b), 0);
-
-      const remaining = slot.maxGuests - bookedCount;
-      return {
-        time: slot.time,
-        remaining: remaining,
-        // Nếu số chỗ còn lại ít hơn số khách đang định đặt -> Full
-        isFull: remaining < targetQty,
-      };
-    });
-
-    res.json(results);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 5. Booking Step 3
-app.post("/booking-step3", (req, res) => {
-  const { selectedPlans, shopId, date, time, totalQuantity } = req.body;
-  const plansData = JSON.parse(selectedPlans);
-  const shop = shops.find((s) => s.id == shopId) || shops[0];
-
-  let baseTotal = 0;
-  plansData.forEach((p) => (baseTotal += p.subTotal));
-
-  res.render("booking_step3", {
-    plansData: plansData,
-    shop: shop,
-    bookingInfo: { date, time, totalQuantity },
-    options: options,
-    baseTotal: baseTotal,
-    pageTitle: res.__("titles.booking_step3"),
-  });
-});
-
-// 6. Booking Finish (Lưu đơn hàng)
-app.post("/booking-finish", async (req, res) => {
-  try {
-    const {
-      shopId,
-      date,
-      time,
-      fullname,
-      email,
-      phone,
-      plansDataString,
-      ...body
-    } = req.body;
-    const plansData = JSON.parse(plansDataString);
-    const shop = shops.find((s) => s.id == shopId) || shops[0];
-
-    const guests = [];
-    let finalTotal = 0;
-
-    plansData.forEach((plan) => {
-      for (let i = 1; i <= plan.qty; i++) {
-        const inputName = `options_${plan.id}_${i}`;
-        const selectedOpts = body[inputName];
-
-        let optionsPrice = 0;
-        let optionsList = [];
-
-        if (selectedOpts) {
-          const optsArray = Array.isArray(selectedOpts)
-            ? selectedOpts
-            : [selectedOpts];
-          optsArray.forEach((optId) => {
-            const opt = options.find((o) => o.id === optId);
-            if (opt) {
-              optionsPrice += opt.price;
-              optionsList.push(opt.name);
-            }
-          });
-        }
-
-        finalTotal += plan.price + optionsPrice;
-
-        guests.push({
-          planName: plan.title, // Giờ title lấy từ DB nên chắc chắn có
-          price: plan.price + optionsPrice,
-          guestIndex: guests.length + 1,
-          selectedOptions: optionsList,
-        });
-      }
-    });
-
-    const newBooking = new Booking({
-      fullname,
-      email,
-      phone,
-      shopId: shop.id,
-      shopName: shop.name,
-      date,
-      time,
-      totalPrice: finalTotal,
-      guests: guests,
-      bookingCode: createBookingCode(),
-      status: "Mới",
-      statusHistory: [
-        {
-          to: "Mới",
-          note: "Đơn được tạo từ website.",
-          changedBy: "Website",
-        },
-      ],
-      language: req.getLocale(), // 👈 THÊM DÒNG NÀY ĐỂ LƯU NGÔN NGỮ
-    });
-
-    await newBooking.save();
-    console.log("📝 Đơn hàng mới:", newBooking._id);
-
-    try {
-      await sendBookingEmails({
-        booking: newBooking,
-        shop,
-        plansData,
-        lang: req.getLocale(),
-      });
-    } catch (mailError) {
-      console.error("❌ Lỗi gửi email đặt lịch:", mailError);
-    }
-
-    // Gộp tên các gói lại thành 1 chuỗi để hiển thị
-    const planNames = plansData.map((p) => p.title).join(", ");
-
-    res.render("success", {
-      info: {
-        fullname: newBooking.fullname,
-        planName: planNames,
-        date: newBooking.date,
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    res.send("Lỗi xử lý đơn hàng: " + err.message);
-  }
-});
-
-// --- ADMIN & LOGIN ROUTES ---
-
-app.get("/login", (req, res) => {
-  res.render("login", { error: null });
-});
-
-app.post("/login", (req, res) => {
-  const { username, password } = req.body;
-  if (
-    username === process.env.ADMIN_USER &&
-    password === process.env.ADMIN_PASS
-  ) {
-    req.session.isAdmin = true;
-    res.redirect("/admin");
-  } else {
-    res.render("login", { error: "Sai tài khoản hoặc mật khẩu!" });
-  }
-});
-
-app.get("/logout", (req, res) => {
-  req.session.destroy();
-  res.redirect("/login");
-});
+require("./routes/bookings").registerBookingRoutes(app, { getVisiblePlans });
+require("./routes/auth").registerAuthRoutes(app);
 
 app.get("/admin", requireLogin, async (req, res) => {
   try {
     const today = getTokyoDate();
     const monthStart = `${today.slice(0, 7)}-01`;
     const bookingFilter = getAdminBookingFilter(req.query);
-    const requestedPage = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const requestedPage = Math.min(Math.max(parseInt(req.query.page, 10) || 1, 1), 10000);
     const bookingPageSize = 50;
     const activeFilter = {
       archivedAt: null,
@@ -1687,6 +853,7 @@ app.get("/admin", requireLogin, async (req, res) => {
       upcomingBookings,
       pendingCount,
       monthBookings,
+      backgroundJobs,
     ] = await Promise.all([
       Booking.find(bookingFilter)
         .sort({ date: 1, time: 1, createdAt: -1 })
@@ -1705,9 +872,8 @@ app.get("/admin", requireLogin, async (req, res) => {
         .limit(8)
         .lean(),
       Booking.countDocuments(pendingFilter),
-      Booking.find({ ...activeFilter, date: { $gte: monthStart, $lte: today } })
-        .select("totalPrice")
-        .lean(),
+      Booking.aggregate([{ $match: { ...activeFilter, date: { $gte: monthStart, $lte: today } } }, { $group: { _id: null, total: { $sum: "$totalPrice" } } }]),
+      Job.find({ status: { $in: ["pending", "running", "failed"] } }).select("type status attempts lastError updatedAt").sort({ updatedAt: -1 }).limit(20).lean(),
     ]);
 
     const todayActiveBookings = todayBookings.filter((booking) =>
@@ -1717,10 +883,8 @@ app.get("/admin", requireLogin, async (req, res) => {
       (total, booking) => total + getBookingGuestCount(booking),
       0,
     );
-    const monthRevenue = monthBookings.reduce(
-      (total, booking) => total + (Number(booking.totalPrice) || 0),
-      0,
-    );
+    const monthRevenue = monthBookings[0]?.total || 0;
+
     const bookingDetails = new Map();
     [...bookings, ...todayBookings, ...upcomingBookings].forEach((booking) => {
       bookingDetails.set(String(booking._id), {
@@ -1766,6 +930,7 @@ app.get("/admin", requireLogin, async (req, res) => {
 
     res.render("admin", {
       bookings,
+      backgroundJobs,
       plans,
       blogs,
       heroImage: heroConfig ? heroConfig.value : "",
@@ -1804,7 +969,7 @@ app.get("/admin", requireLogin, async (req, res) => {
       csrfToken: getAdminCsrfToken(req),
     });
   } catch (error) {
-    console.error("Lỗi Admin:", error);
+    console.error(JSON.stringify({ event: "request_error" }));
     res.status(500).send("Không thể tải trang quản trị.");
   }
 });
@@ -1814,8 +979,11 @@ app.get("/admin", requireLogin, async (req, res) => {
 app.post(
   "/admin/plan/save",
   requireLogin,
+  rateLimit("admin-upload", 20, 600000),
+  manageUploads,
   upload.array("photos", 10),
   requireAdminCsrf,
+  publishUploads,
   async (req, res) => {
     try {
       const {
@@ -1840,16 +1008,20 @@ app.post(
           .filter((s) => s);
       }
 
-      const mainImage = images.length > 0 ? images[0] : oldImage || "";
+      images = images.map(safeImageUrl).filter(Boolean);
+      const mainImage = images.length > 0 ? images[0] : safeImageUrl(oldImage);
 
       // 👇 CẬP NHẬT: Dịch cả Tiêu đề (title) và Mô tả (desc)
-      const multiLangTitle = await translateDescToAllLanguages(title);
-      const multiLangDesc = await translateDescToAllLanguages(desc);
+      const sourceLocale = req.getLocale();
+      const cleanTitle = text(title, "title", 200);
+      const cleanDesc = text(desc, "description", 10000);
+      const multiLangTitle = initialText(cleanTitle, sourceLocale);
+      const multiLangDesc = initialText(cleanDesc, sourceLocale);
 
       const planData = {
         title: multiLangTitle, // Lưu title dưới dạng Object đa ngôn ngữ
-        price: parseInt(price),
-        originalPrice: parseInt(originalPrice),
+        price: integer(price, "price", 0, 10000000),
+        originalPrice: originalPrice ? integer(originalPrice, "price", 0, 10000000) : undefined,
         image: mainImage,
         images: images,
         desc: multiLangDesc,
@@ -1857,21 +1029,25 @@ app.post(
         isVisible: isVisible === "on",
       };
 
-      if (id) {
-        if (images.length === 0) {
-          delete planData.images;
-          delete planData.image;
+      await mongoose.connection.transaction(async session => {
+        let saved;
+        if (id) {
+          if (!mongoose.isObjectIdOrHexString(id)) throw new AppError(400, "invalid_plan");
+          if (images.length === 0) { delete planData.images; delete planData.image; }
+          saved = await Plan.findByIdAndUpdate(id, { $set: planData, $inc: { translationVersion: 1 } }, { returnDocument: "after", runValidators: true, session });
+          if (!saved) throw new AppError(404, "not_found");
+        } else {
+          if (!planData.image) planData.image = "/img/gallery/1.jpg";
+          [saved] = await Plan.create([{ ...planData, translationVersion: 1 }], { session });
         }
-        await Plan.findByIdAndUpdate(id, planData);
-      } else {
-        if (!planData.image) planData.image = "https://via.placeholder.com/300";
-        await new Plan(planData).save();
-      }
+        await Job.create([{ key: "translate:plan:" + saved._id + ":" + saved.translationVersion, type: "translation",
+          payload: { model: "Plan", id: String(saved._id), version: saved.translationVersion, locale: sourceLocale, source: { title: multiLangTitle, desc: multiLangDesc } } }], { session });
+      });
 
       res.redirect(adminRedirect("plan-saved", "plans"));
     } catch (err) {
-      console.error(err);
-      res.send("Lỗi lưu gói: " + err.message);
+      console.error(JSON.stringify({ event: "request_error" }));
+      res.status(err.status || 500).send("Không thể xử lý yêu cầu.");
     }
   },
 );
@@ -1881,7 +1057,7 @@ app.post("/admin/plan/delete/:id", requireLogin, requireAdminCsrf, async (req, r
     await Plan.findByIdAndDelete(req.params.id);
     res.redirect(adminRedirect("plan-deleted", "plans"));
   } catch (error) {
-    console.error("Lỗi xóa gói:", error);
+    console.error(JSON.stringify({ event: "request_error" }));
     res.redirect(adminRedirect("plan-delete-failed", "plans"));
   }
 });
@@ -1889,8 +1065,11 @@ app.post("/admin/plan/delete/:id", requireLogin, requireAdminCsrf, async (req, r
 app.post(
   "/admin/blog/save",
   requireLogin,
+  rateLimit("admin-upload", 20, 600000),
+  manageUploads,
   upload.single("thumbnail_file"),
   requireAdminCsrf,
+  publishUploads,
   async (req, res) => {
     try {
       const {
@@ -1904,16 +1083,16 @@ app.post(
         thumbnail,
       } = req.body;
 
-      const cleanTitle = normalizeEnv(title);
-      const cleanExcerpt = normalizeEnv(excerpt);
-      const cleanContent = normalizeEnv(content);
+      const cleanTitle = text(title, "title", 200);
+      const cleanExcerpt = text(excerpt, "excerpt", 1000);
+      const cleanContent = text(content, "content", 40000);
 
       if (!cleanTitle || !cleanExcerpt || !cleanContent) {
         return res.status(400).send("Thiếu tiêu đề, mô tả ngắn hoặc nội dung blog.");
       }
 
       const finalSlug = await ensureUniqueBlogSlug(slug || cleanTitle);
-      const finalThumbnail = req.file?.path || normalizeEnv(thumbnail) || defaultSeoImage;
+      const finalThumbnail = req.file?.path || safeImageUrl(thumbnail) || defaultSeoImage;
       const parsedSections = parseBlogSections(cleanContent, cleanTitle);
       const parsedFaq = parseBlogFaq(faq);
       const keywordList = normalizeEnv(keywords)
@@ -1921,10 +1100,11 @@ app.post(
         .map((item) => item.trim())
         .filter(Boolean);
 
-      const translatedTitle = await translateDescToAllLanguages(cleanTitle);
-      const translatedExcerpt = await translateDescToAllLanguages(cleanExcerpt);
-      const translatedSections = await translateBlogSectionsToAllLanguages(parsedSections);
-      const translatedFaq = await translateBlogFaqToAllLanguages(parsedFaq);
+      const sourceLocale = req.getLocale();
+      const translatedTitle = initialText(cleanTitle, sourceLocale);
+      const translatedExcerpt = initialText(cleanExcerpt, sourceLocale);
+      const translatedSections = parsedSections.map(s => ({ heading: initialText(s.heading, sourceLocale), paragraphs: s.paragraphs.map(p => initialText(p, sourceLocale)) }));
+      const translatedFaq = parsedFaq.map(f => ({ question: initialText(f.question, sourceLocale), answer: initialText(f.answer, sourceLocale) }));
       const translatedMetaTitle = Object.fromEntries(
         Object.entries(translatedTitle).map(([lang, value]) => [
           lang,
@@ -1943,15 +1123,20 @@ app.post(
         keywords: keywordList,
         sections: translatedSections,
         faq: translatedFaq,
-        date: normalizeEnv(date) || new Date().toISOString().slice(0, 10),
+        date: validDate(date) ? date : tokyoDate(),
+        translationVersion: 1,
         isPublished: req.body.isPublished === "on",
       };
 
-      await BlogPost.create(blogData);
+      await mongoose.connection.transaction(async session => {
+        const [saved] = await BlogPost.create([blogData], { session });
+        const source = Object.fromEntries(["title", "metaTitle", "metaDescription", "excerpt", "thumbnailAlt", "sections", "faq"].map(k => [k, blogData[k]]));
+        await Job.create([{ key: "translate:blog:" + saved._id + ":1", type: "translation", payload: { model: "BlogPost", id: String(saved._id), version: 1, locale: sourceLocale, source } }], { session });
+      });
       res.redirect(adminRedirect("blog-saved", "content"));
     } catch (err) {
-      console.error("Lỗi lưu blog:", err);
-      res.status(500).send("Lỗi lưu blog: " + err.message);
+      console.error(JSON.stringify({ event: "request_error" }));
+      res.status(err.status || 500).send("Không thể xử lý yêu cầu.");
     }
   },
 );
@@ -1961,7 +1146,7 @@ app.post("/admin/blog/delete/:id", requireLogin, requireAdminCsrf, async (req, r
     await BlogPost.findByIdAndDelete(req.params.id);
     res.redirect(adminRedirect("blog-deleted", "content"));
   } catch (error) {
-    console.error("Lỗi xóa blog:", error);
+    console.error(JSON.stringify({ event: "request_error" }));
     res.redirect(adminRedirect("blog-delete-failed", "content"));
   }
 });
@@ -1971,8 +1156,11 @@ app.post("/admin/blog/delete/:id", requireLogin, requireAdminCsrf, async (req, r
 app.post(
   "/admin/config/save",
   requireLogin,
+  rateLimit("admin-upload", 20, 600000),
+  manageUploads,
   upload.array("hero_photos", 5),
   requireAdminCsrf,
+  publishUploads,
   async (req, res) => {
     try {
       // 1. Lấy danh sách ảnh cũ (đang hiển thị)
@@ -1982,7 +1170,7 @@ app.post(
         currentImages = [currentImages]; // Ép về mảng nếu chỉ có 1 ảnh
       }
       // Lọc bỏ các giá trị rỗng/undefined
-      currentImages = currentImages.filter((img) => img && img.trim() !== "");
+      currentImages = currentImages.map(safeImageUrl).filter(Boolean);
 
       // 2. Lấy danh sách ảnh MỚI vừa upload lên Cloudinary
       let newImages = [];
@@ -1992,6 +1180,7 @@ app.post(
 
       // 3. Gộp ảnh cũ + ảnh mới
       const finalImages = [...currentImages, ...newImages];
+      if (finalImages.length > 5) throw new AppError(400, "invalid_images");
 
       // 4. Lưu vào Database (Lưu đè value bằng mảng mới)
       await Config.findOneAndUpdate(
@@ -2002,8 +1191,8 @@ app.post(
 
       res.redirect(adminRedirect("settings-saved", "content"));
     } catch (err) {
-      console.error(err);
-      res.send("Lỗi lưu cấu hình: " + err.message);
+      console.error(JSON.stringify({ event: "request_error" }));
+      res.status(err.status || 500).send("Không thể xử lý yêu cầu.");
     }
   },
 );
@@ -2016,26 +1205,11 @@ app.post("/admin/update/:id", requireLogin, requireAdminCsrf, async (req, res) =
       return res.redirect(adminRedirect("invalid-status", "bookings"));
     }
 
-    const booking = await Booking.findById(req.params.id);
-    if (!booking) return res.redirect(adminRedirect("booking-not-found", "bookings"));
-
-    const previousStatus = booking.status || "Mới";
-    if (previousStatus !== status) {
-      booking.status = status;
-      booking.statusHistory.push({
-        from: previousStatus,
-        to: status,
-        note,
-        changedBy: "Admin",
-      });
-    }
-
-    if (status === "Đã hủy") booking.cancelledAt = new Date();
-    if (status !== "Đã hủy") booking.cancelledAt = undefined;
-    await booking.save();
+    await BookingService.updateBooking(req.params.id, { status, note });
     res.redirect(adminRedirect("booking-updated", "bookings"));
   } catch (error) {
-    console.error("Lỗi cập nhật booking:", error);
+    if (error instanceof AppError) throw error;
+    console.error(JSON.stringify({ event: "request_error" }));
     res.redirect(adminRedirect("booking-update-failed", "bookings"));
   }
 });
@@ -2052,162 +1226,67 @@ app.post("/admin/booking/:id/note", requireLogin, requireAdminCsrf, async (req, 
     await booking.save();
     res.redirect(adminRedirect("note-saved", "bookings"));
   } catch (error) {
-    console.error("Lỗi lưu ghi chú:", error);
+    console.error(JSON.stringify({ event: "request_error" }));
     res.redirect(adminRedirect("note-save-failed", "bookings"));
   }
 });
 
 app.post("/admin/delete/:id", requireLogin, requireAdminCsrf, async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id);
-    if (!booking) return res.redirect(adminRedirect("booking-not-found", "bookings"));
-
-    booking.archivedAt = new Date();
-    booking.notes.push({
-      content: "Đơn được lưu trữ khỏi danh sách vận hành.",
-      createdBy: "Admin",
-    });
-    await booking.save();
+    await BookingService.updateBooking(req.params.id, { archive: true });
     res.redirect(adminRedirect("booking-archived", "bookings"));
   } catch (error) {
-    console.error("Lỗi lưu trữ booking:", error);
+    if (error instanceof AppError) throw error;
+    console.error(JSON.stringify({ event: "request_error" }));
     res.redirect(adminRedirect("booking-archive-failed", "bookings"));
   }
 });
 
 app.post("/admin/booking/:id/restore", requireLogin, requireAdminCsrf, async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id);
-    if (!booking) return res.redirect(adminRedirect("booking-not-found", "bookings"));
-
-    booking.archivedAt = undefined;
-    booking.notes.push({ content: "Đơn được khôi phục vào danh sách vận hành.", createdBy: "Admin" });
-    await booking.save();
+    await BookingService.updateBooking(req.params.id, { archive: false });
     res.redirect(adminRedirect("booking-restored", "bookings"));
   } catch (error) {
-    console.error("Lỗi khôi phục booking:", error);
+    if (error instanceof AppError) throw error;
+    console.error(JSON.stringify({ event: "request_error" }));
     res.redirect(adminRedirect("booking-restore-failed", "bookings"));
   }
 });
 
-// ==========================================
-// CRON JOB: GỬI MAIL NHẮC NHỞ MỖI NGÀY
-// ==========================================
-// Cấu hình chạy vào 07:00 sáng mỗi ngày. Múi giờ đặt là Asia/Tokyo (nếu shop ở Nhật) hoặc Asia/Ho_Chi_Minh (nếu ở VN)
-cron.schedule(
-  "0 7 * * *",
-  async () => {
-    console.log("⏳ Đang chạy Cronjob kiểm tra lịch hẹn hôm nay...");
-    try {
-      // Lấy ngày hôm nay theo chuẩn YYYY-MM-DD
-      const todayString = getTokyoDate();
 
-      // Tìm tất cả đơn hàng có ngày hẹn là hôm nay và trạng thái không phải là đã hủy
-      const bookingsToday = await Booking.find({
-        date: todayString,
-        archivedAt: null,
-        status: { $in: ACTIVE_BOOKING_STATUSES },
-      });
-
-      if (bookingsToday.length === 0) {
-        console.log(`✅ [${todayString}] Hôm nay không có lịch hẹn nào.`);
-        return;
-      }
-
-      const transporter = createMailTransporter();
-      if (!transporter) {
-        console.log("⚠️ Không thể gửi mail nhắc nhở vì thiếu cấu hình SMTP.");
-        return;
-      }
-
-      for (const booking of bookingsToday) {
-        // 1. Mail nhắc khách hàng
-        // Xác định ngôn ngữ của khách (Mặc định là 'en' nếu không có dữ liệu)
-        const lang = booking.language || "en";
-
-        // Tự điển đa ngôn ngữ cho Mail nhắc nhở
-        const remindDict = {
-          vi: {
-            sub: "⏰ Nhắc nhở: Bạn có lịch hẹn hôm nay tại Kokoro",
-            txt1: "Kokoro xin nhắc nhở bạn có lịch hẹn <b>hôm nay</b>.",
-            txt2: "Giờ đến",
-            txt3: "Rất mong được phục vụ bạn!",
-          },
-          en: {
-            sub: "⏰ Reminder: You have an appointment today at Kokoro",
-            txt1: "Kokoro reminds you that you have an appointment <b>today</b>.",
-            txt2: "Arrival time",
-            txt3: "We look forward to serving you!",
-          },
-          jp: {
-            sub: "⏰ リマインダー：本日のご予約について",
-            txt1: "本日のご予約についてお知らせいたします。",
-            txt2: "来店時間",
-            txt3: "ご来店を心よりお待ちしております！",
-          },
-          zh: {
-            sub: "⏰ 提醒：您今天在 Kokoro 有预约",
-            txt1: "Kokoro 提醒您<b>今天</b>有预约。",
-            txt2: "到达时间",
-            txt3: "期待为您服务！",
-          },
-        };
-
-        // Nếu không tìm thấy ngôn ngữ trong từ điển, mặc định lấy tiếng Anh
-        const r = remindDict[lang] || remindDict["en"];
-
-        const customerMail = {
-          from: `"Kokoro Shop" <${process.env.SMTP_USER}>`,
-          to: booking.email,
-          subject: r.sub,
-          html: `
-                    <div style="font-family: Arial, sans-serif; color: #333;">
-                        <h3>${emailDict[lang] && emailDict[lang].hello ? emailDict[lang].hello : "Hello"} ${booking.fullname},</h3>
-                        <p>${r.txt1} (${booking.date})</p>
-                        <p>📍 <b>${emailDict[lang] && emailDict[lang].shop ? emailDict[lang].shop : "Shop"}:</b> ${booking.shopName}</p>
-                        <p>⏰ <b>${r.txt2}:</b> ${booking.time || "Please arrive on time"}</p>
-                        <p>${r.txt3}</p>
-                    </div>
-                `,
-        };
-
-        // 2. Mail báo Admin chuẩn bị
-        const adminMail = {
-          from: `"Kokoro System" <${process.env.SMTP_USER}>`,
-          to: process.env.ADMIN_EMAIL,
-          subject: `🔔 Lịch khách đến hôm nay: ${booking.fullname} - ${booking.time}`,
-          html: `
-                    <div style="font-family: Arial, sans-serif;">
-                        <p>Admin chú ý, hôm nay có khách hàng đã đặt lịch:</p>
-                        <ul>
-                            <li><b>Tên khách:</b> ${booking.fullname}</li>
-                            <li><b>SĐT:</b> ${booking.phone}</li>
-                            <li><b>Giờ đến:</b> ${booking.time}</li>
-                            <li><b>Tổng tiền:</b> ¥${booking.totalPrice.toLocaleString()}</li>
-                        </ul>
-                        <p>Vui lòng chuẩn bị sẵn sàng để đón khách nhé.</p>
-                    </div>
-                `,
-        };
-
-        await transporter.sendMail(customerMail);
-        await transporter.sendMail(adminMail);
-      }
-
-      console.log(
-        `✅ Đã gửi email nhắc nhở cho ${bookingsToday.length} khách hàng trong hôm nay.`,
-      );
-    } catch (error) {
-      console.error("❌ Lỗi khi chạy Cronjob nhắc lịch:", error);
-    }
-  },
-  {
-    scheduled: true,
-    timezone: "Asia/Tokyo", // Đổi thành "Asia/Ho_Chi_Minh" nếu shop của bạn phục vụ giờ Việt Nam
-  },
-);
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server đang chạy tại http://localhost:${PORT}`);
+app.post("/admin/jobs/:id/retry", requireLogin, requireAdminCsrf, async (req, res) => {
+  if (!mongoose.isObjectIdOrHexString(req.params.id)) throw new AppError(400, "invalid_job");
+  await Job.updateOne({ _id: req.params.id, status: "failed" }, { $set: { status: "pending", attempts: 0, availableAt: new Date() }, $unset: { lastError: 1, lockToken: 1, lockedUntil: 1 } });
+  res.redirect(303, "/admin");
 });
+
+app.use((req, res, next) => next(new AppError(404, "not_found")));
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  const status = error.status || (error.name === "MulterError" ? 400 : error.name === "ValidationError" || error.name === "CastError" ? 400 : 503);
+  const code = error instanceof AppError ? error.code : status === 400 ? "invalid_request" : "service_unavailable";
+  const language = typeof req.getLocale === "function" ? req.getLocale() : "en";
+  const message = errorMessage(code, language);
+  console.error(JSON.stringify({ event: "request_error", code, status, route: req.route?.path || "unknown" }));
+  res.set("Cache-Control", "no-store");
+  if (req.path.startsWith("/api/")) return res.status(status).json({ error: message, code });
+  res.status(status).render("error", { message, ui: messages(language), locale: language, asset });
+});
+async function start() {
+  validateConfig();
+  await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 });
+  await Promise.all([Booking.init(), Plan.init(), BlogPost.init(), Config.init(), Job.init(), require("./models/SlotInventory").init(), require("./models/RateBucket").init()]);
+  const hello = await mongoose.connection.db.admin().command({ hello: 1 });
+  if (!hello.setName && hello.msg !== "isdbgrid") throw new Error("MongoDB transactions require a replica set.");
+  const stopWorker = process.env.WORKER_ENABLED === "false" ? async () => {} : require("./services/jobs").startWorker();
+  const server = app.listen(process.env.PORT || 3000, () => console.log("Kokoro server listening."));
+  async function stop() { server.close(); await stopWorker(); await mongoose.disconnect(); }
+  process.once("SIGTERM", stop); process.once("SIGINT", stop);
+  return { server, stop };
+}
+if (require.main === module) start().catch(error => {
+  console.error("Startup failed:", /^(Missing configuration|Use a session|TRUST_PROXY|Production requires|MongoDB transactions)/.test(error.message) ? error.message : "Check service configuration and database connectivity.");
+  process.exitCode = 1;
+  mongoose.disconnect().catch(() => {});
+});
+module.exports = { app, start };

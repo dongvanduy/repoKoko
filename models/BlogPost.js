@@ -28,6 +28,7 @@ const blogFaqSchema = new mongoose.Schema(
 
 const blogPostSchema = new mongoose.Schema(
   {
+    translationVersion: { type: Number, default: 0 },
     slug: { type: String, required: true, unique: true, trim: true },
     title: localizedTextSchema,
     metaTitle: localizedTextSchema,

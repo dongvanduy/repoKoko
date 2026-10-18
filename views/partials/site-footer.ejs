@@ -1,7 +1,7 @@
 <footer class="bg-[#2c2725] text-white/80 py-10 border-t-4 border-accent">
   <div class="max-w-7xl mx-auto px-5 grid gap-8 md:grid-cols-[1.2fr_1fr_1fr]">
     <div>
-      <img src="/img/common/logo.svg" alt="Kokoro Kimono Rental Kyoto logo" class="h-16 mb-4 brightness-0 invert opacity-60" loading="lazy" decoding="async">
+      <img src="<%= asset('logo-320.webp') %>" srcset="<%= asset('logo-320.webp') %> 1x, <%= asset('logo-640.webp') %> 2x" alt="Kokoro Kimono Rental Kyoto logo" class="h-16 mb-4 brightness-0 invert opacity-60" loading="lazy" decoding="async">
       <p class="text-sm leading-relaxed max-w-md">
         <%= seoText.footerDescription %>
       </p>

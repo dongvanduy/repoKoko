@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= __(plan.title) %> - Kokoro Rental</title> <script src="https://cdn.tailwindcss.com"></script>
+    <title><%= getLocalizedText(plan.title) %> - Kokoro Rental</title> <link rel="stylesheet" href="<%= asset('site.css') %>">
 </head>
 <body class="bg-[rgba(248,244,230,1)] text-[#544A47]">
 
@@ -16,10 +16,10 @@
 
     <main class="max-w-[1000px] mx-auto p-5 md:py-10">
         <div class="bg-white rounded-2xl shadow-xl overflow-hidden md:flex">
-            
+
             <div class="md:w-1/2 h-[400px] md:h-auto relative">
-                <img src="<%= plan.image || plan.img %>" class="w-full h-full object-cover" alt="kimono rental Kyoto plan - <%= getLocalizedText(plan.title) %>" loading="lazy" decoding="async">
-                
+                <img src="<%= responsiveImage(plan.image || plan.img, 800) %>" srcset="<%= responsiveImage(plan.image || plan.img, 400) %> 400w, <%= responsiveImage(plan.image || plan.img, 800) %> 800w" sizes="(max-width: 768px) 100vw, 50vw" class="w-full h-full object-cover" alt="kimono rental Kyoto plan - <%= getLocalizedText(plan.title) %>" fetchpriority="high" decoding="async" width="600" height="800">
+
                 <% if(plan.tag) { %>
                     <span class="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow">
                         <%= __(plan.tag) %> </span>
@@ -27,8 +27,8 @@
             </div>
 
             <div class="md:w-1/2 p-8 flex flex-col justify-center">
-                <h1 class="text-3xl md:text-4xl font-bold mb-4"><%= __(plan.title) %></h1>
-                
+                <h1 class="text-3xl md:text-4xl font-bold mb-4"><%= getLocalizedText(plan.title) %></h1>
+
                 <div class="mb-6">
                     <p class="text-sm text-gray-500"><%= __('detail.price_label') %></p>
                     <div class="flex items-end gap-3">
@@ -39,11 +39,11 @@
                     </div>
                 </div>
 
-                <p class="text-lg leading-relaxed mb-6"><%= plan.desc && plan.desc[locale] ? plan.desc[locale] : (plan.desc.vi || plan.desc) %></p>
+                <p class="text-lg leading-relaxed mb-6"><%= getLocalizedText(plan.desc) %></p>
 
                 <div class="bg-gray-50 p-4 rounded-lg mb-8">
                     <h3 class="font-bold mb-2"><%= __('detail.includes_title') %></h3>
-                    
+
                     <ul class="grid grid-cols-2 gap-2">
                         <% if (plan.features && plan.features.length > 0) { %>
                             <% plan.features.forEach(item => { %>
@@ -51,55 +51,41 @@
                                     ✅ <%= __(item) %> </li>
                             <% }) %>
                         <% } else { %>
-                            <li class="text-sm text-gray-500 italic">Updating features...</li>
+                            <li class="text-sm text-gray-500 italic"><%= ui.featuresPending %></li>
                         <% } %>
                     </ul>
                 </div>
 
                 <div class="mt-8 border-t pt-8">
                     <h3 class="text-2xl font-bold mb-4 text-[#BA2636]"><%= __('detail.booking_title') %></h3>
-                    
-                    <form action="/booking" method="POST" class="space-y-4">
+
+                    <form action="/booking" method="POST" class="space-y-4" data-booking-review data-base-total="<%= plan.price %>" data-quick-total>
+<input type="hidden" name="csrfToken" value="<%= csrfToken %>">
+<input type="hidden" name="quote" value="<%= quote %>">
                         <input type="hidden" name="planId" value="<%= plan.id || plan._id %>">
-                        <input type="hidden" name="planName" value="<%= __(plan.title) %>"> <input type="hidden" name="shopId" value="<%= typeof selectedShopId !== 'undefined' ? selectedShopId : '' %>">
-                        
+                        <input type="hidden" name="shopId" value="<%= typeof selectedShopId !== 'undefined' ? selectedShopId : '' %>">
+
                         <div>
-                            <label class="block font-bold mb-1"><%= __('detail.fullname') %></label>
-                            <input type="text" name="fullname" required placeholder="<%= __('detail.fullname_placeholder') %>" 
+                            <label for="quick-fullname" class="block font-bold mb-1"><%= __('detail.fullname') %></label>
+                            <input type="text" id="quick-fullname" name="fullname" maxlength="120" autocomplete="name" required placeholder="<%= __('detail.fullname_placeholder') %>"
                                    class="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:border-[#BA2636]">
                         </div>
 
                         <div>
-                            <label class="block font-bold mb-1"><%= __('detail.email') %></label>
-                            <input type="email" name="email" required placeholder="example@email.com" 
+                            <label for="quick-email" class="block font-bold mb-1"><%= __('detail.email') %></label>
+                            <input type="email" id="quick-email" name="email" maxlength="254" autocomplete="email" required placeholder="example@email.com"
                                    class="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:border-[#BA2636]">
                         </div>
 
-                        <div class="flex gap-4">
-                            <div class="w-1/2">
-                                <label class="block font-bold mb-1"><%= __('detail.date') %></label>
-                                <input type="date" name="date" required 
-                                       class="w-full border border-gray-300 p-3 rounded-lg">
-                            </div>
-                            <div class="w-1/2">
-                                <label class="block font-bold mb-1"><%= __('detail.guests') %></label>
-                                <input type="number" name="quantity" value="1" min="1" required 
-                                       class="w-full border border-gray-300 p-3 rounded-lg">
-                            </div>
-                        </div>
-
+<label class="block"><span class="block font-bold mb-1"><%= __('detail.guests') %></span><input type="number" name="quantity" value="1" min="1" max="20" required class="w-full border border-gray-300 p-3 rounded-lg"></label>
+<%- include('partials/booking-slots', { dateValue: calendar.tomorrow, timeValue: '' }) %>
                         <div>
-                            <label class="block font-bold mb-1"><%= __('detail.time') %></label>
-                            <input type="time" name="time" required 
+                            <label for="quick-phone" class="block font-bold mb-1"><%= __('detail.phone') %></label>
+                            <input type="tel" id="quick-phone" name="phone" maxlength="40" autocomplete="tel" required placeholder="0909xxxxxx"
                                    class="w-full border border-gray-300 p-3 rounded-lg">
                         </div>
 
-                        <div>
-                            <label class="block font-bold mb-1"><%= __('detail.phone') %></label>
-                            <input type="tel" name="phone" required placeholder="0909xxxxxx" 
-                                   class="w-full border border-gray-300 p-3 rounded-lg">
-                        </div>
-
+                        <p class="text-lg font-bold"><%= ui.total %>: JPY <span data-final-total><%= plan.price.toLocaleString("ja-JP") %></span></p>
                         <button type="submit" class="w-full bg-gradient-to-r from-pink-500 to-[#BA2636] text-white py-4 rounded-full font-bold text-lg hover:shadow-lg transition transform hover:-translate-y-1 mt-4">
                             <%= __('detail.submit') %>
                         </button>
@@ -109,5 +95,6 @@
         </div>
     </main>
 
+<script src="<%= asset('booking-total.js') %>" defer></script>
 </body>
 </html>

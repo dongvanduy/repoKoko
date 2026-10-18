@@ -4,15 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= pageTitle %></title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { theme: { extend: { colors: { bgBase: 'rgba(248, 244, 230, 1)', main: '#544A47', accent: '#BA2636', sub1: '#8D837F' } } } }
-    </script>
+    <link rel="stylesheet" href="<%= asset('site.css') %>">
+
 </head>
 <body class="bg-bgBase text-main font-sans pb-32">
 
     <header class="px-8 flex justify-center bg-white shadow-sm sticky top-0 z-50">
-        <a href="/"><img src="/img/common/logo.svg" alt="Kokoro Kimono Rental Kyoto logo" class="h-14"></a>
+        <a href="/"><img src="<%= asset('logo-320.webp') %>" srcset="<%= asset('logo-320.webp') %> 1x, <%= asset('logo-640.webp') %> 2x" alt="Kokoro Kimono Rental Kyoto logo" class="h-14"></a>
     </header>
 
     <main class="max-w-[1000px] mx-auto px-5">
@@ -25,14 +23,15 @@
         <h1 class="text-2xl font-bold text-center mb-4"><%= __('booking.step1.title') %></h1>
 
         <form action="/booking-step2" method="POST" id="bookingForm">
-            
+<input type="hidden" name="csrfToken" value="<%= csrfToken %>">
+
             <div class="grid gap-6">
                 <% plans.forEach(plan => { %>
-                    <div class="bg-white shadow-sm rounded-2xl overflow-hidden md:flex border border-transparent transition hover:shadow-lg group plan-card" 
+                    <div class="bg-white shadow-sm rounded-2xl overflow-hidden md:flex border border-transparent transition hover:shadow-lg group plan-card"
                          data-price="<%= plan.price %>">
-                        
+
                         <div class="md:w-[200px] h-[200px] md:h-auto flex-shrink-0 rounded-lg overflow-hidden relative">
-                            <img src="<%= plan.image || plan.img %>" alt="kimono rental Kyoto booking plan - <%= getLocalizedText(plan.title) %>" class="w-full h-full object-cover" loading="lazy" decoding="async">
+                            <img src="<%= responsiveImage(plan.image || plan.img, 800) %>" srcset="<%= responsiveImage(plan.image || plan.img, 400) %> 400w, <%= responsiveImage(plan.image || plan.img, 800) %> 800w" sizes="(max-width: 768px) 100vw, 50vw" alt="kimono rental Kyoto booking plan - <%= getLocalizedText(plan.title) %>" class="w-full h-full object-cover" loading="lazy" decoding="async">
                             <% if(plan.tag) { %> <span class="absolute top-2 left-2 bg-yellow-500 text-white text-[10px] font-bold px-2 py-1 rounded"><%= plan.tag %></span> <% } %>
                         </div>
 
@@ -40,7 +39,7 @@
                             <div class="flex justify-between items-start">
                                 <h3 class="text-xl font-bold text-main pr-4"><%= getLocalizedText(plan.title) %></h3>
                                 <div class="text-right whitespace-nowrap">
-                                    <span class="text-accent text-2xl font-bold"><%= formatPrice(plan.price) %></span>
+                                    <span class="text-accent text-2xl font-bold">JPY <%= Number(plan.price).toLocaleString("ja-JP") %></span>
                                     <span class="text-xs text-main block mt-1"><%= __('booking.common.per_person') %></span>
                                 </div>
                             </div>
@@ -48,7 +47,7 @@
                             <div class="mt-auto bg-gray-50 p-3 rounded-lg flex items-center justify-between">
                                 <span class="font-bold text-sm"><%= __('booking.step1.quantity_label') %></span>
                                 <div class="relative w-32">
-                                    <select name="plan_<%= plan.id %>" class="quantity-select w-full border border-gray-300 p-2 rounded-lg font-bold text-center focus:border-accent outline-none">
+                                    <select name="plan_<%= plan._id || plan.legacyId || plan.id %>" class="quantity-select w-full border border-gray-300 p-2 rounded-lg font-bold text-center focus:border-accent outline-none">
                                         <option value="0">0</option>
                                         <option value="1"><%= __n('booking.common.guest_count', 1) %></option>
                                         <option value="2"><%= __n('booking.common.guest_count', 2) %></option>
@@ -78,7 +77,7 @@
         </form>
     </main>
 
-    <script>
+    <script nonce="<%= cspNonce %>">
         const selects = document.querySelectorAll('.quantity-select');
         const totalQtyEl = document.getElementById('totalQty');
         const totalPriceEl = document.getElementById('totalPrice');
@@ -94,7 +93,7 @@
                     const price = parseInt(select.closest('.plan-card').dataset.price);
                     totalQ += qty;
                     totalP += qty * price;
-                    
+
                     // Highlight card đã chọn
                     select.closest('.plan-card').classList.add('border-accent', 'ring-1', 'ring-accent');
                 } else {
@@ -107,7 +106,7 @@
             totalPriceEl.innerText = totalP.toLocaleString();
 
             // Bật/Tắt nút Submit
-            if (totalQ > 0) {
+            if (totalQ > 0 && totalQ <= 20) {
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('bg-gray-400');
                 submitBtn.classList.add('bg-gradient-to-r', 'from-pink-500', 'to-[#BA2636]');

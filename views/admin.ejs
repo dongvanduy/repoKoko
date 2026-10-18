@@ -37,28 +37,14 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= pageTitle %></title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            ink: "#17211b",
-            moss: "#486154",
-            paper: "#f7f7f4",
-            line: "#e5e7e3",
-            brand: "#ba2636"
-          }
-        }
-      }
-    };
-  </script>
+  <link rel="stylesheet" href="<%= asset('site.css') %>">
+  <script src="<%= asset('lucide.min.js') %>" defer></script>
+
 </head>
 <body class="min-h-screen bg-paper text-ink antialiased">
   <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-white lg:flex lg:flex-col">
     <div class="flex h-20 items-center gap-3 border-b border-line px-6">
-      <img src="/img/common/logo.png" alt="Kokoro Kimono" class="h-9 w-9 rounded-lg object-contain">
+      <img src="<%= asset('logo-320.webp') %>" srcset="<%= asset('logo-320.webp') %> 1x, <%= asset('logo-640.webp') %> 2x" alt="Kokoro Kimono" class="h-9 w-9 rounded-lg object-contain">
       <div>
         <p class="font-semibold leading-5">Kokoro Kimono</p>
         <p class="text-xs text-moss">Operations</p>
@@ -84,9 +70,9 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
       <a href="/" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-moss hover:bg-stone-100">
         <i data-lucide="external-link" class="h-4 w-4"></i><span>Mở website</span>
       </a>
-      <a href="/logout" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-rose-700 hover:bg-rose-50">
+      <form action="/logout" method="POST"><input type="hidden" name="csrfToken" value="<%= formCsrf() %>"><button type="submit" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-rose-700 hover:bg-rose-50">
         <i data-lucide="log-out" class="h-4 w-4"></i><span>Đăng xuất</span>
-      </a>
+      </button></form>
     </div>
   </aside>
 
@@ -101,9 +87,9 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
           <a href="/" target="_blank" rel="noopener" title="Mở website" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line text-moss hover:bg-stone-100 lg:hidden">
             <i data-lucide="external-link" class="h-4 w-4"></i>
           </a>
-          <a href="/logout" title="Đăng xuất" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line text-rose-700 hover:bg-rose-50 lg:hidden">
+          <form action="/logout" method="POST"><input type="hidden" name="csrfToken" value="<%= formCsrf() %>"><button type="submit" title="Đăng xuất" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line text-rose-700 hover:bg-rose-50 lg:hidden">
             <i data-lucide="log-out" class="h-4 w-4"></i>
-          </a>
+          </button></form>
         </div>
       </div>
       <nav class="flex gap-1 overflow-x-auto border-t border-line px-3 py-2 lg:hidden" aria-label="Điều hướng quản trị trên di động">
@@ -123,6 +109,12 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
       <% } %>
 
       <section id="tab-dashboard" class="admin-tab space-y-6">
+<section class="border border-line rounded-xl bg-white p-4 mb-5">
+<p class="text-sm font-semibold mb-2">Lịch vận hành theo giờ Nhật Bản — JST, UTC+9</p>
+<% if (backgroundJobs.length) { %><details><summary class="cursor-pointer font-semibold">Email và bản dịch đang xử lý (<%= backgroundJobs.length %>)</summary><ul class="divide-y mt-3">
+<% backgroundJobs.forEach(job => { %><li class="py-2 flex flex-wrap items-center gap-3 text-sm"><span><%= job.type %> · <%= job.status %> · lần thử <%= job.attempts %></span><span class="text-rose-700"><%= job.lastError || '' %></span>
+<% if (job.status === 'failed') { %><form method="POST" action="/admin/jobs/<%= job._id %>/retry"><input type="hidden" name="csrfToken" value="<%= csrfToken %>"><button class="underline text-brand">Thử lại</button></form><% } %>
+</li><% }) %></ul></details><% } %></section>
         <div class="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p class="text-sm text-moss">Vận hành hôm nay</p>
@@ -324,7 +316,7 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
                 <p class="mt-4 line-clamp-3 text-sm leading-6 text-moss"><%= planDesc %></p>
                 <div class="mt-auto flex items-center justify-between border-t border-line pt-4">
                   <button type="button" data-plan-edit data-id="<%= plan._id %>" data-title="<%= planTitle %>" data-price="<%= plan.price || '' %>" data-original="<%= plan.originalPrice || '' %>" data-images="<%= plan.images ? plan.images.join(',') : '' %>" data-image="<%= plan.image || '' %>" data-desc="<%= planDesc %>" data-tag="<%= plan.tag || '' %>" data-visible="<%= plan.isVisible !== false %>" class="inline-flex items-center gap-2 text-sm font-semibold text-ink hover:text-brand"><i data-lucide="pencil" class="h-4 w-4"></i><span>Sửa</span></button>
-                  <form action="/admin/plan/delete/<%= plan._id %>" method="POST" onsubmit="return confirm('Xóa gói dịch vụ này?')"><input type="hidden" name="csrfToken" value="<%= csrfToken %>"><button class="inline-flex h-8 w-8 items-center justify-center rounded text-rose-700 hover:bg-rose-50" title="Xóa gói"><i data-lucide="trash-2" class="h-4 w-4"></i></button></form>
+                  <form action="/admin/plan/delete/<%= plan._id %>" method="POST" data-confirm="Xóa gói dịch vụ này?"><input type="hidden" name="csrfToken" value="<%= csrfToken %>"><button class="inline-flex h-8 w-8 items-center justify-center rounded text-rose-700 hover:bg-rose-50" title="Xóa gói"><i data-lucide="trash-2" class="h-4 w-4"></i></button></form>
                 </div>
               </div>
             </article>
@@ -342,7 +334,7 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
               <div><label for="blogTitle" class="mb-1.5 block text-sm font-medium">Tiêu đề</label><input id="blogTitle" type="text" name="title" required class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss" placeholder="Best Kimono Rental Near Kiyomizu Temple"></div>
               <div class="grid gap-4 sm:grid-cols-2">
                 <div><label for="blogSlug" class="mb-1.5 block text-sm font-medium">Slug URL</label><input id="blogSlug" type="text" name="slug" class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss" placeholder="Tu dong tao neu bo trong"></div>
-                <div><label for="blogDate" class="mb-1.5 block text-sm font-medium">Ngày đăng</label><input id="blogDate" type="date" name="date" value="<%= new Date().toISOString().slice(0, 10) %>" class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss"></div>
+                <div><label for="blogDate" class="mb-1.5 block text-sm font-medium">Ngày đăng</label><input id="blogDate" type="date" name="date" value="<%= dashboard.today %>" class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss"></div>
               </div>
               <div><label for="blogExcerpt" class="mb-1.5 block text-sm font-medium">Mô tả ngắn</label><textarea id="blogExcerpt" name="excerpt" rows="3" required class="w-full border border-line px-3 py-2.5 outline-none focus:border-moss"></textarea></div>
               <div class="grid gap-4 sm:grid-cols-2">
@@ -367,7 +359,7 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
                   <% const blogTitle = getPlanText(blog.title); const blogExcerpt = getPlanText(blog.excerpt); %>
                   <article class="flex gap-4 p-5">
                     <img src="<%= blog.thumbnail || '/img/gallery/1.jpg' %>" alt="" class="h-20 w-20 shrink-0 object-cover" loading="lazy" decoding="async">
-                    <div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-3"><span class="rounded px-2 py-1 text-xs <%= blog.isPublished ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600' %>"><%= blog.isPublished ? 'Đã đăng' : 'Bản nháp' %></span><span class="text-xs text-moss"><%= blog.date %></span></div><h4 class="mt-2 line-clamp-2 font-semibold"><%= blogTitle %></h4><p class="mt-1 line-clamp-2 text-sm text-moss"><%= blogExcerpt %></p><div class="mt-3 flex items-center justify-between"><a href="/blog/<%= blog.slug %>" target="_blank" rel="noopener" class="text-sm font-semibold text-brand hover:text-rose-800">Xem bài</a><form action="/admin/blog/delete/<%= blog._id %>" method="POST" onsubmit="return confirm('Xóa bài blog này?')"><input type="hidden" name="csrfToken" value="<%= csrfToken %>"><button title="Xóa bài blog" class="inline-flex h-8 w-8 items-center justify-center rounded text-rose-700 hover:bg-rose-50"><i data-lucide="trash-2" class="h-4 w-4"></i></button></form></div></div>
+                    <div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-3"><span class="rounded px-2 py-1 text-xs <%= blog.isPublished ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600' %>"><%= blog.isPublished ? 'Đã đăng' : 'Bản nháp' %></span><span class="text-xs text-moss"><%= blog.date %></span></div><h4 class="mt-2 line-clamp-2 font-semibold"><%= blogTitle %></h4><p class="mt-1 line-clamp-2 text-sm text-moss"><%= blogExcerpt %></p><div class="mt-3 flex items-center justify-between"><a href="/blog/<%= blog.slug %>" target="_blank" rel="noopener" class="text-sm font-semibold text-brand hover:text-rose-800">Xem bài</a><form action="/admin/blog/delete/<%= blog._id %>" method="POST" data-confirm="Xóa bài blog này?"><input type="hidden" name="csrfToken" value="<%= csrfToken %>"><button title="Xóa bài blog" class="inline-flex h-8 w-8 items-center justify-center rounded text-rose-700 hover:bg-rose-50"><i data-lucide="trash-2" class="h-4 w-4"></i></button></form></div></div>
                   </article>
                 <% }) %>
               </div>
@@ -402,7 +394,7 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
     </main>
   </div>
 
-  <div id="bookingDrawer" class="fixed inset-0 z-50 hidden bg-black/30" aria-hidden="true">
+  <div id="bookingDrawer" role="dialog" aria-modal="true" aria-labelledby="bookingDrawerTitle" class="fixed inset-0 z-50 hidden bg-black/30" aria-hidden="true">
     <aside class="ml-auto flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
       <div class="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
         <div><p id="bookingDrawerCode" class="text-xs font-medium text-moss"></p><h2 id="bookingDrawerTitle" class="mt-1 text-lg font-semibold">Chi tiết booking</h2></div>
@@ -412,7 +404,7 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
     </aside>
   </div>
 
-  <div id="productModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4" aria-hidden="true">
+  <div id="productModal" role="dialog" aria-modal="true" aria-labelledby="planModalTitle" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4" aria-hidden="true">
     <div class="max-h-full w-full max-w-xl overflow-y-auto bg-white shadow-2xl">
       <div class="flex items-center justify-between border-b border-line px-5 py-4"><h2 id="planModalTitle" class="font-semibold">Thêm gói dịch vụ</h2><button type="button" id="closePlanModal" title="Đóng" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-moss hover:bg-stone-100"><i data-lucide="x" class="h-5 w-5"></i></button></div>
       <form action="/admin/plan/save" method="POST" enctype="multipart/form-data" class="space-y-4 p-5">
@@ -429,7 +421,8 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
     </div>
   </div>
 
-  <script>
+  <script nonce="<%= cspNonce %>">
+  document.addEventListener("DOMContentLoaded", () => {
     const bookingData = <%- bookingDataJson %>;
     const bookingStatuses = <%- bookingStatusesJson %>;
     const csrfToken = "<%= csrfToken %>";
@@ -472,10 +465,30 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
       if (updateHash) window.history.replaceState(null, "", `#tab-${tabName}`);
     };
 
+    let dialogTrigger = null;
+    const activateDialog = (dialog) => {
+      dialogTrigger = document.activeElement;
+      dialog.setAttribute("aria-hidden", "false");
+      dialog.querySelector("button, input, select, textarea, a[href]")?.focus();
+    };
+    const restoreDialogFocus = (dialog) => {
+      dialog.setAttribute("aria-hidden", "true");
+      dialogTrigger?.focus(); dialogTrigger = null;
+    };
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Tab") return;
+      const dialog = [...document.querySelectorAll('[role="dialog"]')].find(el => !el.classList.contains("hidden"));
+      if (!dialog) return;
+      const items = [...dialog.querySelectorAll('a[href], button:not(:disabled), input:not([type="hidden"]):not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')].filter(el => el.getClientRects().length);
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    });
     const closeBookingDrawer = () => {
       const drawer = document.getElementById("bookingDrawer");
+      if (drawer.classList.contains("hidden")) return;
       drawer.classList.add("hidden");
-      drawer.setAttribute("aria-hidden", "true");
+      restoreDialogFocus(drawer);
     };
 
     const openBookingDrawer = (bookingId) => {
@@ -487,10 +500,10 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
         ? booking.guests.map((guest, index) => `<li class="flex items-start justify-between gap-3 border-b border-line py-3 last:border-0"><span><span class="block font-medium">${escapeHtml(localizedValue(guest.planName) || `Khách ${index + 1}`)}</span><span class="mt-1 block text-xs text-moss">${escapeHtml((guest.selectedOptions || []).join(", ") || "Không có tùy chọn thêm")}</span></span><span class="shrink-0 font-medium">${formatCurrency(guest.price)}</span></li>`).join("")
         : `<li class="py-3 text-sm text-moss">Chưa có chi tiết từng khách.</li>`;
       const history = booking.statusHistory && booking.statusHistory.length
-        ? [...booking.statusHistory].reverse().map((item) => `<li class="border-l-2 border-line pl-3 pb-4 last:pb-0"><p class="text-sm font-medium">${escapeHtml(item.from ? `${item.from} → ${item.to}` : item.to)}</p>${item.note ? `<p class="mt-1 text-sm text-moss">${escapeHtml(item.note)}</p>` : ""}<p class="mt-1 text-xs text-moss">${escapeHtml(item.changedBy || "System")} · ${item.createdAt ? new Date(item.createdAt).toLocaleString("vi-VN") : ""}</p></li>`).join("")
-        : `<li class="border-l-2 border-line pl-3 text-sm"><p class="font-medium">Booking được tạo</p><p class="mt-1 text-xs text-moss">${booking.createdAt ? new Date(booking.createdAt).toLocaleString("vi-VN") : "Không có thời điểm tạo"}</p></li>`;
+        ? [...booking.statusHistory].reverse().map((item) => `<li class="border-l-2 border-line pl-3 pb-4 last:pb-0"><p class="text-sm font-medium">${escapeHtml(item.from ? `${item.from} → ${item.to}` : item.to)}</p>${item.note ? `<p class="mt-1 text-sm text-moss">${escapeHtml(item.note)}</p>` : ""}<p class="mt-1 text-xs text-moss">${escapeHtml(item.changedBy || "System")} · ${item.createdAt ? new Date(item.createdAt).toLocaleString("vi-VN", { timeZone: "Asia/Tokyo" }) : ""}</p></li>`).join("")
+        : `<li class="border-l-2 border-line pl-3 text-sm"><p class="font-medium">Booking được tạo</p><p class="mt-1 text-xs text-moss">${booking.createdAt ? new Date(booking.createdAt).toLocaleString("vi-VN", { timeZone: "Asia/Tokyo" }) : "Không có thời điểm tạo"}</p></li>`;
       const notes = booking.notes && booking.notes.length
-        ? [...booking.notes].reverse().map((item) => `<li class="border-b border-line py-3 last:border-0"><p class="text-sm leading-6">${escapeHtml(item.content)}</p><p class="mt-1 text-xs text-moss">${escapeHtml(item.createdBy || "Admin")} · ${item.createdAt ? new Date(item.createdAt).toLocaleString("vi-VN") : ""}</p></li>`).join("")
+        ? [...booking.notes].reverse().map((item) => `<li class="border-b border-line py-3 last:border-0"><p class="text-sm leading-6">${escapeHtml(item.content)}</p><p class="mt-1 text-xs text-moss">${escapeHtml(item.createdBy || "Admin")} · ${item.createdAt ? new Date(item.createdAt).toLocaleString("vi-VN", { timeZone: "Asia/Tokyo" }) : ""}</p></li>`).join("")
         : `<li class="py-3 text-sm text-moss">Chưa có ghi chú nội bộ.</li>`;
       const statusOptions = bookingStatuses.map((status) => `<option value="${escapeHtml(status)}" ${booking.status === status ? "selected" : ""}>${escapeHtml(status)}</option>`).join("");
       const contactLinks = [
@@ -503,20 +516,24 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
       document.getElementById("bookingDrawerContent").innerHTML = `
         <div class="space-y-7">
           <section class="border border-line p-4">
-            <div class="flex items-start justify-between gap-4"><div><p class="text-xs text-moss">Lịch đến</p><p class="mt-1 font-semibold">${escapeHtml(booking.date)} · ${escapeHtml(booking.time || "--:--")}</p><p class="mt-1 text-sm text-moss">${escapeHtml(booking.shopName)}</p><p class="mt-2 text-xs text-moss">Tạo lúc ${booking.createdAt ? new Date(booking.createdAt).toLocaleString("vi-VN") : "--"}</p></div><span class="shrink-0 rounded px-2 py-1 text-xs font-medium ring-1 ring-inset ${statusClass}">${escapeHtml(booking.status)}</span></div>
+            <div class="flex items-start justify-between gap-4"><div><p class="text-xs text-moss">Lịch đến · JST (UTC+9)</p><p class="mt-1 font-semibold">${escapeHtml(booking.date)} · ${escapeHtml(booking.time || "--:--")}</p><p class="mt-1 text-sm text-moss">${escapeHtml(booking.shopName)}</p><p class="mt-2 text-xs text-moss">Tạo lúc ${booking.createdAt ? new Date(booking.createdAt).toLocaleString("vi-VN", { timeZone: "Asia/Tokyo" }) : "--"}</p></div><span class="shrink-0 rounded px-2 py-1 text-xs font-medium ring-1 ring-inset ${statusClass}">${escapeHtml(booking.status)}</span></div>
             <div class="mt-4 flex flex-wrap gap-x-5 gap-y-2">${contactLinks || '<span class="text-sm text-moss">Chưa có thông tin liên hệ.</span>'}</div>
           </section>
           <section><div class="mb-3 flex items-center justify-between"><h3 class="font-semibold">Chi tiết dịch vụ</h3><span class="text-sm font-semibold">${formatCurrency(booking.totalPrice)}</span></div><ul class="border-y border-line">${guests}</ul></section>
-          ${booking.archivedAt ? `<section class="border border-amber-200 bg-amber-50 p-4"><p class="text-sm font-medium text-amber-900">Booking này đang được lưu trữ.</p><form action="/admin/booking/${booking.id}/restore" method="POST" class="mt-3"><input type="hidden" name="csrfToken" value="${csrfToken}"><button class="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-amber-900 ring-1 ring-inset ring-amber-300 hover:bg-amber-100"><i data-lucide="rotate-ccw" class="h-4 w-4"></i><span>Khôi phục booking</span></button></form></section>` : `<section class="border border-line p-4"><h3 class="font-semibold">Cập nhật trạng thái</h3><form action="/admin/update/${booking.id}" method="POST" class="mt-3 space-y-3"><input type="hidden" name="csrfToken" value="${csrfToken}"><select name="status" class="w-full border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-moss">${statusOptions}</select><textarea name="note" rows="2" maxlength="1000" class="w-full border border-line px-3 py-2.5 text-sm outline-none focus:border-moss" placeholder="Ghi lại lý do hoặc thông tin bàn giao"></textarea><button class="inline-flex items-center gap-2 rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-black"><i data-lucide="check" class="h-4 w-4"></i><span>Lưu trạng thái</span></button></form><form action="/admin/delete/${booking.id}" method="POST" onsubmit="return confirm('Lưu trữ booking này?')" class="mt-3"><input type="hidden" name="csrfToken" value="${csrfToken}"><button class="inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-rose-700 hover:bg-rose-50 px-3 py-2"><i data-lucide="archive" class="h-4 w-4"></i><span>Lưu trữ booking</span></button></form></section>`}
+          ${booking.archivedAt ? `<section class="border border-amber-200 bg-amber-50 p-4"><p class="text-sm font-medium text-amber-900">Booking này đang được lưu trữ.</p><form action="/admin/booking/${booking.id}/restore" method="POST" class="mt-3"><input type="hidden" name="csrfToken" value="${csrfToken}"><button class="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-amber-900 ring-1 ring-inset ring-amber-300 hover:bg-amber-100"><i data-lucide="rotate-ccw" class="h-4 w-4"></i><span>Khôi phục booking</span></button></form></section>` : `<section class="border border-line p-4"><h3 class="font-semibold">Cập nhật trạng thái</h3><form action="/admin/update/${booking.id}" method="POST" class="mt-3 space-y-3"><input type="hidden" name="csrfToken" value="${csrfToken}"><select name="status" class="w-full border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-moss">${statusOptions}</select><textarea name="note" rows="2" maxlength="1000" class="w-full border border-line px-3 py-2.5 text-sm outline-none focus:border-moss" placeholder="Ghi lại lý do hoặc thông tin bàn giao"></textarea><button class="inline-flex items-center gap-2 rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-white hover:bg-black"><i data-lucide="check" class="h-4 w-4"></i><span>Lưu trạng thái</span></button></form><form action="/admin/delete/${booking.id}" method="POST" data-confirm="Lưu trữ booking này?" class="mt-3"><input type="hidden" name="csrfToken" value="${csrfToken}"><button class="inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-rose-700 hover:bg-rose-50 px-3 py-2"><i data-lucide="archive" class="h-4 w-4"></i><span>Lưu trữ booking</span></button></form></section>`}
           <section><h3 class="font-semibold">Ghi chú nội bộ</h3><ul class="mt-3 border-y border-line">${notes}</ul><form action="/admin/booking/${booking.id}/note" method="POST" class="mt-3 flex gap-2"><input type="hidden" name="csrfToken" value="${csrfToken}"><label class="sr-only" for="bookingNote">Ghi chú nội bộ</label><input id="bookingNote" type="text" name="note" maxlength="1000" required class="min-w-0 flex-1 border border-line px-3 py-2.5 text-sm outline-none focus:border-moss" placeholder="Thêm ghi chú"><button title="Lưu ghi chú" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-ink text-white hover:bg-black"><i data-lucide="plus" class="h-4 w-4"></i></button></form></section>
           <section><h3 class="font-semibold">Lịch sử trạng thái</h3><ol class="mt-4">${history}</ol></section>
         </div>`;
       drawer.classList.remove("hidden");
-      drawer.setAttribute("aria-hidden", "false");
+      activateDialog(drawer);
       if (window.lucide) window.lucide.createIcons();
     };
 
-    const closePlanModal = () => document.getElementById("productModal").classList.add("hidden");
+    const closePlanModal = () => {
+      const modal = document.getElementById("productModal");
+      if (modal.classList.contains("hidden")) return;
+      modal.classList.add("hidden"); restoreDialogFocus(modal);
+    };
     const openPlanModal = (data = null) => {
       document.getElementById("planId").value = data ? data.id : "";
       document.getElementById("planTitle").value = data ? data.title : "";
@@ -540,7 +557,8 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
           imageContainer.appendChild(image);
         });
       }
-      document.getElementById("productModal").classList.remove("hidden");
+      const modal = document.getElementById("productModal");
+      modal.classList.remove("hidden"); activateDialog(modal);
     };
 
     document.querySelectorAll("[data-tab-target]").forEach((button) => button.addEventListener("click", () => setActiveTab(button.dataset.tabTarget)));
@@ -560,6 +578,7 @@ const getGuestCount = (booking) => Array.isArray(booking.guests) && booking.gues
     const hashTab = window.location.hash.replace("#tab-", "");
     setActiveTab(document.getElementById(`tab-${hashTab}`) ? hashTab : defaultAdminTab, false);
     if (window.lucide) window.lucide.createIcons();
+  });
   </script>
-</body>
+<script src="<%= asset('site.js') %>" defer></script></body>
 </html>

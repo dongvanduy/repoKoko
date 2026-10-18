@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title><%= __('success.title') %></title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="<%= asset('site.css') %>">
   </head>
-  <body class="bg-gray-100 h-screen flex items-center justify-center">
+  <body class="bg-gray-100 min-h-screen py-8 flex items-center justify-center">
     <div class="bg-white p-10 rounded-2xl shadow-xl text-center max-w-lg">
       <div
         class="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl"
@@ -19,7 +19,7 @@
       <p class="text-gray-600 mb-6">
         <%= __('success.received', { name: info.fullname }) %><br />
         <%= __('success.plan', { plan: info.planName }) %><br />
-        <%= __('success.date', { date: info.date }) %>
+        <%= __('success.date', { date: info.date }) %><br><%= ui.timezone %><br><%= ui.bookingCode %>: <%= info.bookingCode %><br><%= ui.shop %>: <%= info.shopName %>
         <% if (info.time) { %>
         <br />
         <%= __('success.time', { time: info.time }) %>

@@ -1,0 +1,235 @@
+{
+  "scope": "Local test fixture. Baseline already includes static Tailwind and booking changes; comparison isolates later image/logo optimizations. External fonts, maps and flag images are blocked. Not a production field report.",
+  "before": {
+    "kind": "local synthetic fixture, not production field metrics or a before/after comparison",
+    "network": {
+      "latency": 150,
+      "downloadBytesPerSecond": 200000,
+      "cpuSlowdown": 4
+    },
+    "summary": {
+      "home": {
+        "lcp": 1268,
+        "cls": 0,
+        "interactionDuration": 16,
+        "ttfb": 17.799999952316284,
+        "resources": 3301288
+      },
+      "detail": {
+        "lcp": 892,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 40.80000001192093,
+        "resources": 84798
+      }
+    },
+    "samples": [
+      {
+        "page": "home",
+        "run": 1,
+        "lcp": 1768,
+        "cls": 0,
+        "interactionDuration": 16,
+        "ttfb": 69.10000002384186,
+        "resources": 3301288
+      },
+      {
+        "page": "home",
+        "run": 2,
+        "lcp": 1268,
+        "cls": 0,
+        "interactionDuration": 16,
+        "ttfb": 17.799999952316284,
+        "resources": 3301288
+      },
+      {
+        "page": "home",
+        "run": 3,
+        "lcp": 1252,
+        "cls": 0,
+        "interactionDuration": 16,
+        "ttfb": 14.399999976158142,
+        "resources": 3301288
+      },
+      {
+        "page": "home",
+        "run": 4,
+        "lcp": 1248,
+        "cls": 0,
+        "interactionDuration": 16,
+        "ttfb": 15.700000047683716,
+        "resources": 3301288
+      },
+      {
+        "page": "home",
+        "run": 5,
+        "lcp": 1232,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 13.699999988079071,
+        "resources": 3301288
+      },
+      {
+        "page": "detail",
+        "run": 1,
+        "lcp": 904,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 18.799999952316284,
+        "resources": 84798
+      },
+      {
+        "page": "detail",
+        "run": 2,
+        "lcp": 884,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 41.69999998807907,
+        "resources": 84798
+      },
+      {
+        "page": "detail",
+        "run": 3,
+        "lcp": 892,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 40.80000001192093,
+        "resources": 84798
+      },
+      {
+        "page": "detail",
+        "run": 4,
+        "lcp": 872,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 40.19999998807907,
+        "resources": 84798
+      },
+      {
+        "page": "detail",
+        "run": 5,
+        "lcp": 888,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 13.100000023841858,
+        "resources": 84798
+      }
+    ]
+  },
+  "after": {
+    "kind": "local synthetic fixture, not production field metrics or a before/after comparison",
+    "network": {
+      "latency": 150,
+      "downloadBytesPerSecond": 200000,
+      "cpuSlowdown": 4
+    },
+    "summary": {
+      "home": {
+        "lcp": 1268,
+        "cls": 0,
+        "interactionDuration": 16,
+        "ttfb": 16.299999952316284,
+        "resources": 160188
+      },
+      "detail": {
+        "lcp": 992,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 47.5,
+        "resources": 85776
+      }
+    },
+    "samples": [
+      {
+        "page": "home",
+        "run": 1,
+        "lcp": 1548,
+        "cls": 0,
+        "interactionDuration": 16,
+        "ttfb": 46.10000002384186,
+        "resources": 160188
+      },
+      {
+        "page": "home",
+        "run": 2,
+        "lcp": 1224,
+        "cls": 0,
+        "interactionDuration": 16,
+        "ttfb": 16.299999952316284,
+        "resources": 160188
+      },
+      {
+        "page": "home",
+        "run": 3,
+        "lcp": 1268,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 13.699999988079071,
+        "resources": 160188
+      },
+      {
+        "page": "home",
+        "run": 4,
+        "lcp": 1228,
+        "cls": 0,
+        "interactionDuration": 16,
+        "ttfb": 11.899999976158142,
+        "resources": 160188
+      },
+      {
+        "page": "home",
+        "run": 5,
+        "lcp": 1232,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 14.699999988079071,
+        "resources": 160188
+      },
+      {
+        "page": "detail",
+        "run": 1,
+        "lcp": 940,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 50.10000002384186,
+        "resources": 85776
+      },
+      {
+        "page": "detail",
+        "run": 2,
+        "lcp": 940,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 17.399999976158142,
+        "resources": 85776
+      },
+      {
+        "page": "detail",
+        "run": 3,
+        "lcp": 992,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 47.5,
+        "resources": 85776
+      },
+      {
+        "page": "detail",
+        "run": 4,
+        "lcp": 940,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 44.19999998807907,
+        "resources": 85776
+      },
+      {
+        "page": "detail",
+        "run": 5,
+        "lcp": 1000,
+        "cls": 0,
+        "interactionDuration": 0,
+        "ttfb": 15.5,
+        "resources": 85776
+      }
+    ]
+  }
+}

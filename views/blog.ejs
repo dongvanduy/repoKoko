@@ -22,7 +22,7 @@
         <% posts.forEach((post) => { %>
           <article class="rounded-lg bg-white border border-gray-100 shadow-sm overflow-hidden flex flex-col">
             <a href="/blog/<%= post.slug %>" class="block overflow-hidden">
-              <img src="<%= post.thumbnail %>" alt="<%= post.thumbnailAlt %>" class="h-64 w-full object-cover transition duration-500 hover:scale-105" loading="lazy" decoding="async">
+              <img src="<%= responsiveImage(post.thumbnail, 800) %>" srcset="<%= responsiveImage(post.thumbnail, 400) %> 400w, <%= responsiveImage(post.thumbnail, 800) %> 800w" sizes="(max-width: 768px) 100vw, 50vw" alt="<%= post.thumbnailAlt %>" class="h-64 w-full object-cover transition duration-500 hover:scale-105" loading="lazy" decoding="async">
             </a>
             <div class="p-6 flex flex-col flex-1">
               <time datetime="<%= post.date %>" class="text-xs font-bold uppercase tracking-widest text-sub1"><%= post.date %></time>
