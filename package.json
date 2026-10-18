@@ -12,7 +12,8 @@
     "db:migrate": "node scripts/migrate-bookings.js",
     "db:seed": "node scripts/seed.js",
     "seo:prepare": "node scripts/prepare-seo.js",
-    "prestart": "node scripts/check-assets.js"
+    "prestart": "node scripts/check-assets.js",
+    "check:deploy": "node scripts/check-deploy.js"
   },
   "keywords": [],
   "author": "",

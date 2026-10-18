@@ -57,22 +57,22 @@
                     <div class="flex items-center gap-3 text-white/80">
                         <% const activeClass = "font-bold text-gold scale-110"; %>
                         <% const normalClass = "hover:text-white transition hover:scale-110 opacity-70 hover:opacity-100"; %>
-                        <a href="/change-lang/vi" class="flex items-center gap-1 <%= getLocale() === 'vi' ? activeClass : normalClass %>">
+                        <a href="<%= languageSwitchUrl('vi') %>" class="flex items-center gap-1 <%= getLocale() === 'vi' ? activeClass : normalClass %>">
                             <img src="https://flagcdn.com/w20/vn.png" class="w-4 h-auto shadow-sm" alt="VN"> VI
                         </a>
                         <span class="text-white/20">|</span>
 
-                        <a href="/change-lang/jp" class="flex items-center gap-1 <%= getLocale() === 'jp' ? activeClass : normalClass %>">
+                        <a href="<%= languageSwitchUrl('jp') %>" class="flex items-center gap-1 <%= getLocale() === 'jp' ? activeClass : normalClass %>">
                             <img src="https://flagcdn.com/w20/jp.png" class="w-4 h-auto shadow-sm" alt="JP"> JP
                         </a>
                         <span class="text-white/20">|</span>
 
-                        <a href="/change-lang/zh" class="flex items-center gap-1 <%= getLocale() === 'zh' ? activeClass : normalClass %>">
+                        <a href="<%= languageSwitchUrl('zh') %>" class="flex items-center gap-1 <%= getLocale() === 'zh' ? activeClass : normalClass %>">
                             <img src="https://flagcdn.com/w20/cn.png" class="w-4 h-auto shadow-sm" alt="ZH"> ZH
                         </a>
                         <span class="text-white/20">|</span>
 
-                        <a href="/change-lang/en" class="flex items-center gap-1 <%= getLocale() === 'en' ? activeClass : normalClass %>">
+                        <a href="<%= languageSwitchUrl('en') %>" class="flex items-center gap-1 <%= getLocale() === 'en' ? activeClass : normalClass %>">
                             <img src="https://flagcdn.com/w20/us.png" class="w-4 h-auto shadow-sm" alt="EN"> EN
                         </a>
                     </div>

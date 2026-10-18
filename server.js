@@ -47,9 +47,12 @@ const { AppError } = require("./lib/errors");
 const { text, integer, safeImageUrl, jsonForHtml } = require("./lib/validation");
 const { messages, errorMessage } = require("./lib/messages");
 const { tokyoDate, validDate } = require("./lib/time");
-const { asset, responsiveImage } = require("./lib/assets");
+const { asset, responsiveImage, assertAssetsBuilt } = require("./lib/assets");
 const { validateConfig } = require("./lib/config");
+const { languageReturnPath } = require("./lib/navigation");
 const app = express();
+// Template helpers are available for every render, including early error responses.
+Object.assign(app.locals, { asset, responsiveImage, jsonLd: jsonForHtml });
 app.disable("x-powered-by");
 
 mongoose.set("bufferCommands", false);
@@ -498,9 +501,6 @@ app.use(i18n.init);
 app.use((req, res, next) => {
   res.locals.siteUrl = siteUrl;
   res.locals.absoluteUrl = absoluteUrl;
-  res.locals.jsonLd = escapeJsonForHtml;
-  res.locals.asset = asset;
-  res.locals.responsiveImage = responsiveImage;
   next();
 });
 
@@ -520,6 +520,7 @@ app.use((req, res, next) => {
   res.locals.locale = currentLocale;
   res.locals.ui = messages(currentLocale);
   res.locals.formCsrf = () => csrfToken(req);
+  res.locals.languageSwitchUrl = lang => "/change-lang/" + encodeURIComponent(lang) + "?" + new URLSearchParams({ returnTo: req.originalUrl });
 
   // 1. Helper: Chuyển đổi và format giá tiền theo ngôn ngữ
   res.locals.formatPrice = (price) => {
@@ -812,15 +813,10 @@ ${urlXml}
 // API Đổi ngôn ngữ
 app.get("/change-lang/:lang", (req, res) => {
   const lang = req.params.lang;
-  if (["vi", "en", "jp", "zh"].includes(lang)) {
-    res.cookie("lang", lang, { maxAge: 90000000, httpOnly: true });
-  }
-  let fallbackUrl = "/";
-  try {
-    const ref = new URL(req.get("Referrer"), siteUrl);
-    if (ref.origin === new URL(siteUrl).origin) { ref.searchParams.delete("lang"); fallbackUrl = ref.pathname + ref.search + ref.hash; }
-  } catch {}
-  res.redirect(fallbackUrl);
+  if (!["vi", "en", "jp", "zh"].includes(lang)) throw new AppError(400, "invalid_request");
+  res.cookie("lang", lang, { maxAge: 90000000, httpOnly: true, sameSite: "lax" });
+  const target = languageReturnPath(req.query.returnTo, req.get("Referrer"), siteUrl);
+  res.set("Cache-Control", "no-store").redirect(302, target);
 });
 
 require("./routes/bookings").registerBookingRoutes(app, { getVisiblePlans });
@@ -1274,6 +1270,7 @@ app.use((error, req, res, next) => {
 });
 async function start() {
   validateConfig();
+  assertAssetsBuilt();
   await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 });
   await Promise.all([Booking.init(), Plan.init(), BlogPost.init(), Config.init(), Job.init(), require("./models/SlotInventory").init(), require("./models/RateBucket").init()]);
   const hello = await mongoose.connection.db.admin().command({ hello: 1 });
@@ -1285,7 +1282,7 @@ async function start() {
   return { server, stop };
 }
 if (require.main === module) start().catch(error => {
-  console.error("Startup failed:", /^(Missing configuration|Use a session|TRUST_PROXY|Production requires|MongoDB transactions)/.test(error.message) ? error.message : "Check service configuration and database connectivity.");
+  console.error("Startup failed:", /^(Missing configuration|Use a session|TRUST_PROXY|Production requires|MongoDB transactions|Assets are missing)/.test(error.message) ? error.message : "Check service configuration and database connectivity.");
   process.exitCode = 1;
   mongoose.disconnect().catch(() => {});
 });

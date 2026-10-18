@@ -63,6 +63,31 @@ test("both booking flows preserve Tokyo wall time in four browser zones; admin a
       await context.close();
     });
   }
+  await t.test("language links work without Referer and keep the current page",async()=>{
+    const context=await browser.newContext();await context.route(/^https:\/\//,route=>route.abort());
+    const page=await context.newPage();page.on("pageerror",e=>errors.push(e.message));
+    const initial=await page.goto(base+"/?lang=vi&utm_source=language-test");
+    assert.equal(initial.headers()["referrer-policy"],"no-referrer");
+    for(const lang of ["en","jp","zh","vi"]){
+      const requestPromise=page.waitForRequest(r=>new URL(r.url()).pathname==="/change-lang/"+lang);
+      await page.locator('a[href^="/change-lang/'+lang+'?"]').click();
+      const request=await requestPromise;
+      assert.equal(request.headers().referer,undefined);
+      await page.waitForURL(base+"/?utm_source=language-test");
+      await page.locator('html[lang="'+lang+'"]').waitFor();
+      assert.equal((await context.cookies()).find(c=>c.name==="lang").value,lang);
+    }
+    const missing=await context.request.get(base+"/change-lang/en",{maxRedirects:0});
+    assert.equal(missing.status(),302);assert.equal(missing.headers().location,"/");
+    assert.equal(missing.headers()["cache-control"],"no-store");
+    for(const returnTo of ["//evil.invalid","https://evil.invalid","/change-lang/vi"]){
+      const response=await context.request.get(base+"/change-lang/en?"+new URLSearchParams({returnTo}),{maxRedirects:0});
+      assert.equal(response.headers().location,"/");
+    }
+    const back=await context.request.get(base+"/change-lang/jp?"+new URLSearchParams({returnTo:"/blog?lang=vi&page=2"}),{maxRedirects:0});
+    assert.equal(back.headers().location,"/blog?page=2");
+    await context.close();
+  });
   await t.test("marketing pages, admin session rotation, CSRF and local assets",async()=>{
     const context=await browser.newContext({viewport:{width:1280,height:900}});
     await context.route(/^https:\/\//,route=>route.abort());

@@ -1,5 +1,26 @@
 # Triển khai và đối soát
 
+## Khi VPS báo `asset is not defined`
+
+Template mới gọi helper được đăng ký trong server mới. Lỗi này có thể xảy ra khi EJS đã đổi trên ổ đĩa nhưng tiến trình Node vẫn giữ JavaScript cũ trong bộ nhớ, hoặc PM2/systemd chạy entrypoint/cwd khác. Thiếu file CSS build là lỗi khác: thường trả 404 tài nguyên, không gây ReferenceError helper.
+
+Bản hiện tại đăng ký asset/responsiveImage/jsonLd trong app.locals ngay khi tạo ứng dụng. Cả `npm start` và `node server.js` đều kiểm tra assets trước khi kết nối DB. Sau khi đưa **toàn bộ release** lên VPS, kiểm tra trong đúng thư mục:
+
+```bash
+cd /var/www/kokorokimono/repoKoko
+node --version
+npm ci --include=dev
+npm run build
+node scripts/hash-admin.js --write
+NODE_ENV=production npm run check:deploy
+```
+
+Lệnh hash chạy lại được nếu đã có ADMIN_PASSWORD_HASH. Các lệnh kiểm tra không migrate hoặc ghi booking. Nếu check:deploy báo thiếu SITE_URL/secret/hash, sửa cấu hình trước khi restart; không tắt kiểm tra bảo mật để chạy tiếp. Node tối thiểu 22.13.1. Build ở thư mục release riêng nếu hệ thống có quy trình atomic deploy.
+
+Với PM2, chạy `pm2 list`, chọn đúng tên/ID website, kiểm tra `pm2 describe TEN_APP` để bảo đảm script path là server.js trong thư mục trên, rồi `NODE_ENV=production pm2 restart TEN_APP --update-env`. Không restart all nếu VPS chạy dịch vụ khác. Nếu dùng ecosystem file, đặt NODE_ENV trong cấu hình tương ứng. Với systemd, restart đúng unit website. Tiến trình Node phải được khởi động lại sau cập nhật JavaScript; tải lại Chrome không làm việc này.
+
+Xác minh `curl -I https://kokorokimono.com/` trả 200 và kiểm tra log riêng ứng dụng nếu không khởi động được. `/health` chỉ kiểm tra kết nối DB; đặt lịch vẫn cần migration bộ đếm như hướng dẫn bên dưới. Chưa kiểm tra hoặc sửa trực tiếp tiến trình VPS từ workspace này.
+
 ## Trạng thái và quy tắc dữ liệu
 
 Giá JPY, tên gói, tùy chọn được tra lại trên máy chủ. Báo giá có chữ ký và gắn với session; thay đổi giá trả 409 để khách xác nhận lại. Các trạng thái chiếm chỗ là Mới, Đã đặt (Chờ đến), Đã xác nhận, Đã đến khi chưa lưu trữ. Hoàn tất, Đã hủy và đơn lưu trữ không chiếm chỗ, giữ quy tắc hiện có.
