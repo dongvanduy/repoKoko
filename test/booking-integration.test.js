@@ -16,7 +16,7 @@ test("booking transactions, pricing, retries and background jobs", async t => {
     assert.equal(results.find(r=>r.status==="rejected").reason.code,"slot_full");
     assert.equal(await Booking.countDocuments(),20);
     assert.equal((await Slot.findOne({date,time:"08:00"})).reserved,20);
-    assert.equal(await Job.countDocuments(),20);
+    assert.equal(await Job.countDocuments(),40);
   });
   await t.test("cancellation/archive/restore never overbook and rollback state on conflict",async()=>{
     const booked=await Booking.findOne();await service.updateBooking(booked._id,{status:"Đã hủy"});
@@ -30,12 +30,12 @@ test("booking transactions, pricing, retries and background jobs", async t => {
     await assert.rejects(service.updateBooking(replacement._id,{archive:false}),e=>e.code==="slot_full");
     assert.ok((await Booking.findById(replacement._id)).archivedAt);
   });
-  await t.test("double submission creates one booking and one mail task",async()=>{
+  await t.test("double submission creates one booking and one mail task per recipient",async()=>{
     const req=make("retry",{time:"09:00",price:-100,plansDataString:JSON.stringify([{price:-1}])});
     const results=await Promise.all([service.createBooking(req),service.createBooking(req)]);
     assert.equal(String(results[0]._id),String(results[1]._id));assert.equal(results[0].totalPrice,3000);
     assert.equal((await Slot.findOne({date,time:"09:00"})).reserved,1);
-    assert.equal(await Job.countDocuments({"payload.bookingId":String(results[0]._id)}),1);
+    assert.equal(await Job.countDocuments({"payload.bookingId":String(results[0]._id)}),2);
     req.body.fullname="Changed";
     await assert.rejects(service.createBooking(req),e=>e.code==="request_changed");
   });

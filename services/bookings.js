@@ -173,7 +173,7 @@ async function createBooking({ body, owner, language, now }) {
     await changeCapacity(booking, guests.length, session);
     await booking.save({ session });
     const jobs = [{ key: "confirmation:customer:" + booking._id, type: "email", payload: { bookingId: String(booking._id), kind: "confirmation", audience: "customer" } }];
-    if (process.env.ADMIN_EMAIL) jobs.push({ key: "confirmation:admin:" + booking._id, type: "email", payload: { bookingId: String(booking._id), kind: "confirmation", audience: "admin" } });
+    jobs.push({ key: "confirmation:admin:" + booking._id, type: "email", payload: { bookingId: String(booking._id), kind: "confirmation", audience: "admin" } });
     await Job.create(jobs, { session, ordered: true });
     return booking;
   });

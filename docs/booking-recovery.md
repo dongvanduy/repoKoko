@@ -20,7 +20,9 @@ Các lệnh npm, node và pm2 chạy trong terminal. Không dán nguyên lệnh 
 
 Nếu API khung giờ đã trả 200 nhưng POST /booking trả 503 khi ADMIN_EMAIL có cấu hình, cần bản sửa tạo tác vụ email với ordered:true trong transaction Mongoose. Không chạy lại migration chỉ để sửa lỗi batch email này. Gửi lại form cũ sau khi cập nhật mã không tạo thêm đơn nếu lần trước đã lưu thành công.
 
-Form thêm gói cho phép mô tả trống. Ảnh JPEG/PNG/WebP tối đa 10 ảnh, mỗi ảnh không quá 5 MiB. Bản sửa kiểm tra giới hạn ở trình duyệt và trả thông báo cụ thể khi server từ chối, thay vì invalid_request chung. Log chỉ ghi loại/mã lỗi, không ghi request body hoặc tên file. Cloudinary không được gọi cho ảnh quá giới hạn.
+Form thêm gói cho phép mô tả trống. Ảnh JPEG/PNG/WebP tối đa 10 ảnh cho mỗi gói. Đã bỏ giới hạn dung lượng mỗi ảnh ở trình duyệt và máy chủ; vẫn kiểm tra định dạng thật, ảnh tĩnh và tối đa 20 triệu điểm ảnh khi đọc metadata. Timeout gửi Cloudinary là 120 giây. Log chỉ ghi loại/mã lỗi, không ghi request body hoặc tên file. Cloudinary không được gọi khi nội dung không phải ảnh hợp lệ.
+
+Giới hạn ngoài ứng dụng: Cloudinary áp dụng giới hạn theo tài khoản/API, Cloudflare và Nginx có thể giới hạn request upload. Nếu bị HTTP 413 trước khi request tới Node, kiểm tra cấu hình proxy trên VPS; thay đổi mã Node không tự sửa cấu hình này. Xem [Cloudinary upload](https://cloudinary.com/documentation/node_image_and_video_upload) và [Cloudflare upload limits](https://developers.cloudflare.com/network/maximum-upload-size/).
 
 ## Nếu restart xong báo 502
 
@@ -86,3 +88,13 @@ API phải trả 200 và mảng khung giờ; giao diện phải xuất hiện gi
 ## Đối soát đã thực hiện
 
 Kiểm tra chỉ đọc DB từ cấu hình workspace ngày 18/10/2026: 59 đơn hợp lệ, 6 bộ đếm cần khởi tạo, không có blocker; MongoDB hỗ trợ transaction. Không có SSH key/agent từ workspace để dừng PM2. Vì vậy chưa áp dụng migration production hoặc restart VPS trong quá trình sửa mã; cần chạy các lệnh trên trong terminal VPS.
+
+## Không nhận email thông báo cho admin
+
+- `ADMIN_EMAIL` là địa chỉ nhận thông báo; `SMTP_USER` là tài khoản gửi. Hai địa chỉ có thể khác nhau. Không tự đổi người nhận hoặc gửi lại các job đã `done`.
+- Mỗi đơn mới luôn có hai tác vụ riêng (khách và admin), ghi cùng transaction. Nếu thiếu địa chỉ admin, tác vụ vẫn được giữ để retry; email khách vẫn gửi độc lập. Thiếu cấu hình hoặc SMTP từ chối được hiển thị riêng là Email admin trong trang quản trị.
+- Thư admin có tiêu đề “[Kokoro] Có đặt lịch mới — mã đơn”, lịch Tokyo và liên hệ khách. Nút trả lời hướng tới email khách.
+- Chạy `npm run check:mail` trên VPS để kiểm tra địa chỉ nhận, worker và kết nối/xác thực SMTP mà không gửi thư. Công cụ đọc môi trường shell và .env; cần đối chiếu cấu hình tiến trình PM2 nếu kết quả khác.
+- Sau khi cập nhật mã/cấu hình, chạy `pm2 restart kokoro --update-env`. Trong dashboard, mở “Email và bản dịch đang xử lý”; sau khi sửa cấu hình có thể nhấn “Thử lại” cho job failed.
+- Dashboard hiển thị địa chỉ nhận thực tế trong tiến trình đang chạy. Nếu khác .env, cần cập nhật biến môi trường PM2 rồi restart; kiểm tra lại địa chỉ ngay trên dashboard.
+- Log `email_accepted` chỉ xác nhận SMTP đã chấp nhận đúng người nhận. Nó không chứng minh thư vào Inbox; kiểm tra Spam, bộ lọc và thư trả lại tại hộp thư gửi nếu job đã done. Không tự gửi lại để tránh trùng thông báo.

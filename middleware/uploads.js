@@ -15,7 +15,8 @@ const storage = multer.diskStorage({
   filename(req, file, done) { done(null, crypto.randomUUID()); },
 });
 const upload = multer({ storage, fileFilter: adminUploadFileFilter,
-  limits: { fileSize: 5 * 1024 * 1024, files: 10, fields: 40, parts: 50, fieldSize: 100 * 1024, fieldNameSize: 100 },
+  // File bytes are unrestricted here; keep multipart counts and text-field limits.
+  limits: { files: 10, fields: 40, parts: 50, fieldSize: 100 * 1024, fieldNameSize: 100 },
 });
 async function removeTemporaryFiles(req) {
   if (!req.uploadDirectoryPromise) return;
@@ -46,7 +47,7 @@ async function publishUploads(req, res, next) {
     }
     for (const file of files) {
       if (req.aborted || res.destroyed) throw new AppError(400, "upload_aborted");
-      const result = await cloudinary.uploader.upload(file.path, { folder: "kokoro_shop", resource_type: "image", timeout: 30000 });
+      const result = await cloudinary.uploader.upload(file.path, { folder: "kokoro_shop", resource_type: "image", timeout: 120000 });
       published.push(result.public_id);
       file.path = result.secure_url;
     }

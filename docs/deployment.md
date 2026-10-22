@@ -67,7 +67,7 @@ Nội dung SEO dịch sẵn bằng `npm run seo:prepare` rồi đưa file JSON c
 
 Theo dõi /health, tỉ lệ 400/409/429/503, độ trễ route, số lỗi login và queue pending/failed. Log không ghi password, secret, email, số điện thoại hoặc request body. Xung đột sức chứa là 409 slot_full; maintenance/transaction lỗi là 503.
 
-Nghiệm thu staging: hai luồng ở bốn múi giờ; được đặt giờ đã qua trong hôm nay Tokyo và chặn ngày quá khứ; sửa giá/gói; 21 yêu cầu cho 20 chỗ; gửi lại sau mất phản hồi; hủy và khôi phục; CSRF multipart; ảnh giả/ảnh quá 5 MiB; SMTP/Mongo/translation lỗi; không có CSP violation.
+Nghiệm thu staging: hai luồng ở bốn múi giờ; được đặt giờ đã qua trong hôm nay Tokyo và chặn ngày quá khứ; sửa giá/gói; 21 yêu cầu cho 20 chỗ; gửi lại sau mất phản hồi; hủy và khôi phục; CSRF multipart; ảnh giả bị chặn/ảnh hợp lệ hơn 5 MiB được chấp nhận; SMTP/Mongo/translation lỗi; không có CSP violation.
 
 Đo hiệu năng trước/sau cùng thiết bị, cùng dữ liệu và cấu hình mạng trên staging. Chạy tối thiểu 5 lần cho mỗi trang, giữ báo cáo thô. Dữ liệu thật p75 mục tiêu LCP <= 2,5s, INP <= 200ms, CLS <= 0,1 cần theo dõi sau triển khai; kiểm thử local không chứng minh được các chỉ số này.
 

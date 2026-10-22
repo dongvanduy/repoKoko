@@ -134,6 +134,13 @@ test("both booking flows preserve Tokyo wall time in four browser zones; admin a
     const bad=await page.request.post(base+"/login",{form:{username:"testadmin",password:"test-password"}});assert.equal(bad.status(),403);
     await page.locator('[name="username"]').fill("testadmin");await page.locator('[name="password"]').fill("test-password");
     await page.locator('button[type="submit"]').click();await page.waitForURL("**/admin");
+    assert.match(await page.locator("[data-admin-mail-recipient]").innerText(),/Chưa thiết lập/);
+    const previousAdminEmail=process.env.ADMIN_EMAIL;
+    try {
+      process.env.ADMIN_EMAIL="configured-admin@example.invalid";
+      await page.reload();
+      assert.equal(await page.locator("[data-admin-mail-recipient]").innerText(),"configured-admin@example.invalid");
+    } finally { process.env.ADMIN_EMAIL=previousAdminEmail; }
     const after=(await context.cookies()).find(c=>c.name==="kokoro.sid");
     assert.notEqual(after.value,before.value);assert.equal(after.httpOnly,true);assert.equal(after.sameSite,"Lax");
     await page.locator('[data-tab-target="bookings"]:visible').first().click();
@@ -147,7 +154,7 @@ test("both booking flows preserve Tokyo wall time in four browser zones; admin a
     const anonymous=await browser.newContext();const other=await anonymous.request.get(base+"/booking-success/"+(await Booking.findOne()).bookingCode);assert.equal(other.status(),404);await anonymous.close();
     await context.close();
   });
-  await t.test("admin creates plans with empty description and valid image, rejects oversized uploads clearly",async()=>{
+  await t.test("admin creates plans with empty description and images above 5 MiB, rejects fake images",async()=>{
     const context=await browser.newContext();await context.route(/^https:\/\//,route=>route.abort());
     const page=await context.newPage();await page.goto(base+"/login");
     await page.locator('[name="username"]').fill("testadmin");await page.locator('[name="password"]').fill("test-password");
@@ -161,8 +168,10 @@ test("both booking flows preserve Tokyo wall time in four browser zones; admin a
         const title=withImage?"Plan with image":"Plan without description";
         await page.locator("#planTitle").fill(title);await page.locator("#planPrice").fill("4500");
         if(withImage){
-          const buffer=await require("sharp")({create:{width:10,height:10,channels:3,background:"red"}}).png().toBuffer();
+          const buffer=await require("sharp")({create:{width:2000,height:1200,channels:3,background:"red"}}).png({compressionLevel:0}).toBuffer();
+          assert.ok(buffer.length>5*1024*1024);
           await page.locator("#planPhotos").setInputFiles({name:"plan.png",mimeType:"image/png",buffer});
+          assert.equal(await page.locator("#planPhotos").evaluate(input=>input.checkValidity()),true);
         }
         const response=page.waitForResponse(r=>r.url()===base+"/admin/plan/save"&&r.request().method()==="POST");
         await page.locator('form[action="/admin/plan/save"] button[type="submit"]').click();
@@ -173,9 +182,9 @@ test("both booking flows preserve Tokyo wall time in four browser zones; admin a
       }
       assert.equal(calls,1);
       const csrfToken=await page.locator('form[action="/admin/plan/save"] [name="csrfToken"]').inputValue();
-      const response=await context.request.post(base+"/admin/plan/save",{multipart:{csrfToken,title:"Too large",price:"4500",desc:"",photos:{name:"large.png",mimeType:"image/png",buffer:Buffer.alloc(5*1024*1024+1)}}});
-      assert.equal(response.status(),413);assert.match(await response.text(),/5 MiB/);
-      assert.equal(calls,1);assert.equal(await Plan.countDocuments({"title.en":"Too large"}),0);
+      const response=await context.request.post(base+"/admin/plan/save",{multipart:{csrfToken,title:"Invalid image",price:"4500",desc:"",photos:{name:"fake.png",mimeType:"image/png",buffer:Buffer.from("<script>alert(1)</script>")}}});
+      assert.equal(response.status(),400);assert.match(await response.text(),/JPEG.*PNG.*WebP/);
+      assert.equal(calls,1);assert.equal(await Plan.countDocuments({"title.en":"Invalid image"}),0);
     }finally{cloud.uploader.upload=original;await context.close();}
   });
   await t.test("slot requests ignore late responses and expose a retry after errors",async()=>{
@@ -231,7 +240,7 @@ test("both booking flows preserve Tokyo wall time in four browser zones; admin a
     const response=await context.request.post(base+"/booking",{form,maxRedirects:0});
     assert.equal(response.status(),303);assert.equal(await Booking.countDocuments(),before+1);
     const Job=require("../../models/Job"),booking=await Booking.findOne({fullname:"Network retry"});
-    assert.equal(await Job.countDocuments({"payload.bookingId":String(booking._id)}),1);
+    assert.equal(await Job.countDocuments({"payload.bookingId":String(booking._id)}),2);
     await context.close();
   });
   await t.test("login throttles failures, CSRF rejects multibyte input and database outage is safe",async()=>{

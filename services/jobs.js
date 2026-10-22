@@ -12,7 +12,7 @@ async function scheduleReminders(now = new Date()) {
   if (now < arrivalInstant(today, "07:00")) return;
   const cursor = Booking.find({ date: today, archivedAt: null, status: { $in: ACTIVE }, startsAt: { $gt: now } }).select("_id").lean().cursor();
   for await (const booking of cursor) {
-    for (const audience of process.env.ADMIN_EMAIL ? ["customer", "admin"] : ["customer"]) {
+    for (const audience of ["customer", "admin"]) {
       const key = "reminder:" + today + ":" + audience + ":" + booking._id;
       try {
         await Job.updateOne({ key }, { $setOnInsert: { type: "email", payload: { bookingId: String(booking._id), kind: "reminder", audience }, status: "pending", availableAt: now } }, { upsert: true });
@@ -39,7 +39,7 @@ async function runOnce(handlers = { email: sendEmailJob, translation: translateJ
     await handlers[job.type](job.payload, job);
     await Job.updateOne(filter, { $set: { status: "done", finishedAt: new Date() }, $unset: { lockToken: 1, lockedUntil: 1, lastError: 1 } });
   } catch (error) {
-    const code = ["mail_not_configured", "mail_recipient_missing", "translation_timeout", "EAUTH", "ECONNECTION", "ETIMEDOUT"].includes(error.code) ? error.code : "job_failed";
+    const code = ["mail_not_configured", "mail_recipient_missing", "mail_recipient_invalid", "mail_not_accepted", "EENVELOPE", "EMESSAGE", "ESOCKET", "EDNS", "translation_timeout", "EAUTH", "ECONNECTION", "ETIMEDOUT"].includes(error.code) ? error.code : "job_failed";
     await Job.updateOne(filter, { $set: {
       status: job.attempts >= MAX_ATTEMPTS ? "failed" : "pending", lastError: code,
       availableAt: new Date(Date.now() + 60000 * 2 ** (job.attempts - 1)),

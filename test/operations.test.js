@@ -50,7 +50,7 @@ test("migration, reminder catch-up and shared abuse limits",async t=>{
     const {scheduleReminders}=require("../services/jobs");
     await scheduleReminders(arrivalInstant(date,"06:59"));assert.equal(await Job.countDocuments(),0);
     await scheduleReminders(arrivalInstant(date,"07:15"));await scheduleReminders(arrivalInstant(date,"07:30"));
-    assert.equal(await Job.countDocuments(),1);
+    assert.equal(await Job.countDocuments(),2);
     await updateBooking(legacy.insertedId,{status:"Đã hủy"});
     let sends=0;const job=await Job.findOne();
     await require("../services/mail").sendEmailJob(job.payload,job,{sendMail:async()=>sends++});
@@ -76,7 +76,7 @@ test("migration, reminder catch-up and shared abuse limits",async t=>{
   });
 });
 
-test("upload checks CSRF, real content, size and temporary cleanup before external publishing",async t=>{
+test("upload accepts images above 5 MiB and checks CSRF, real content and temporary cleanup",async t=>{
   const {upload,manageUploads,publishUploads}=require("../middleware/uploads");
   const {requireAdminCsrf}=require("../middleware/admin-csrf");
   const cloud=require("cloudinary").v2;
@@ -96,6 +96,8 @@ test("upload checks CSRF, real content, size and temporary cleanup before extern
   assert.equal((await submit(png)).status,200);assert.equal(calls,1);
   assert.equal((await submit(Buffer.from("<script>alert(1)</script>"))).status,400);assert.equal(calls,1);
   assert.equal((await submit(png,false)).status,403);assert.equal(calls,1);
-  assert.equal((await submit(Buffer.alloc(5*1024*1024+1))).status,400);assert.equal(calls,1);
+  const largePng=await sharp({create:{width:2000,height:1200,channels:3,background:"red"}}).png({compressionLevel:0}).toBuffer();
+  assert.ok(largePng.length>5*1024*1024);
+  assert.equal((await submit(largePng)).status,200);assert.equal(calls,2);
   for(const promise of dirs){const dir=await promise;for(let i=0;i<50;i++){try{await fs.access(dir);await new Promise(r=>setTimeout(r,10));}catch{break;}}await assert.rejects(fs.access(dir));}
 });

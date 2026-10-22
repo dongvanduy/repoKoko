@@ -3,11 +3,10 @@ document.addEventListener("submit", event => {
   if (message && !window.confirm(message)) event.preventDefault();
 });
 
-document.querySelectorAll("input[type=file][data-max-file-size]").forEach(input => {
+document.querySelectorAll("input[type=file][data-max-files]").forEach(input => {
   input.addEventListener("change", () => {
-    const files = [...input.files], limit = Number(input.dataset.maxFileSize);
-    const message = files.length > Number(input.dataset.maxFiles) ? "Vui lòng chọn tối đa " + input.dataset.maxFiles + " ảnh."
-      : files.some(file => file.size > limit) ? "Mỗi ảnh không được vượt quá 5 MiB. Vui lòng giảm dung lượng ảnh." : "";
+    const message = input.files.length > Number(input.dataset.maxFiles)
+      ? "Vui lòng chọn tối đa " + input.dataset.maxFiles + " ảnh." : "";
     input.setCustomValidity(message);
     if (message) input.reportValidity();
   });

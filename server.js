@@ -869,7 +869,7 @@ app.get("/admin", requireLogin, async (req, res) => {
         .lean(),
       Booking.countDocuments(pendingFilter),
       Booking.aggregate([{ $match: { ...activeFilter, date: { $gte: monthStart, $lte: today } } }, { $group: { _id: null, total: { $sum: "$totalPrice" } } }]),
-      Job.find({ status: { $in: ["pending", "running", "failed"] } }).select("type status attempts lastError updatedAt").sort({ updatedAt: -1 }).limit(20).lean(),
+      Job.find({ status: { $in: ["pending", "running", "failed"] } }).select("type status attempts lastError updatedAt payload.audience payload.kind").sort({ updatedAt: -1 }).limit(20).lean(),
     ]);
 
     const todayActiveBookings = todayBookings.filter((booking) =>
@@ -927,6 +927,7 @@ app.get("/admin", requireLogin, async (req, res) => {
     res.render("admin", {
       bookings,
       backgroundJobs,
+      adminMail: { recipient: process.env.ADMIN_EMAIL?.trim() || "", workerEnabled: process.env.WORKER_ENABLED !== "false" },
       plans,
       blogs,
       heroImage: heroConfig ? heroConfig.value : "",
