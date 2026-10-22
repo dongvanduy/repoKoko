@@ -98,3 +98,53 @@ Kiểm tra chỉ đọc DB từ cấu hình workspace ngày 18/10/2026: 59 đơn
 - Sau khi cập nhật mã/cấu hình, chạy `pm2 restart kokoro --update-env`. Trong dashboard, mở “Email và bản dịch đang xử lý”; sau khi sửa cấu hình có thể nhấn “Thử lại” cho job failed.
 - Dashboard hiển thị địa chỉ nhận thực tế trong tiến trình đang chạy. Nếu khác .env, cần cập nhật biến môi trường PM2 rồi restart; kiểm tra lại địa chỉ ngay trên dashboard.
 - Log `email_accepted` chỉ xác nhận SMTP đã chấp nhận đúng người nhận. Nó không chứng minh thư vào Inbox; kiểm tra Spam, bộ lọc và thư trả lại tại hộp thư gửi nếu job đã done. Không tự gửi lại để tránh trùng thông báo.
+
+## Đăng nhập admin bị 403 — cookie phiên và HTTPS
+
+Log ngày 22/10/2026 cho thấy POST /login trả 403 trước bước kiểm tra mật khẩu. Trang login công khai có token CSRF nhưng không đặt cookie phiên. Nginx đang proxy về localhost:3000 và thiếu X-Forwarded-Proto; cấu hình trước đó cũng chưa tin cậy proxy. Không cần đổi mật khẩu, tắt CSRF hoặc bỏ Secure.
+
+Bản sửa dùng danh sách proxy mặc định của production là `127.0.0.1/32,::1/128`. Cấu hình TRUST_PROXY hiện có vẫn được ưu tiên; có thể dùng `false` nếu Node nhận HTTPS trực tiếp. Proxy ở máy/container khác phải được khai báo IP/CIDR thực tế. Không dùng true hoặc số hop.
+
+Trên VPS, tìm đúng file Nginx phục vụ tên miền:
+
+```bash
+sudo nginx -T 2>/dev/null | grep -E '^# configuration file|server_name|proxy_pass'
+```
+
+Sao lưu file đó trước khi sửa. Trong khối location đang chứa `proxy_pass http://localhost:3000;` của server HTTPS cho kokorokimono.com, giữ các dòng hiện có và bổ sung:
+
+```nginx
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Host $host;
+```
+
+Các header này phải được Nginx ghi đè theo kết nối thực tế; không chuyển thẳng header từ trình duyệt. Bản mẫu đầy đủ cho riêng khối location:
+
+```nginx
+location / {
+    proxy_pass http://localhost:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+}
+```
+
+Giữ cấu hình TLS và các location khác. Sau khi cập nhật toàn bộ mã và Nginx, chạy trong terminal:
+
+```bash
+cd /var/www/kokorokimono/repoKoko
+sudo nginx -t && sudo systemctl reload nginx
+TRUST_PROXY=127.0.0.1/32,::1/128 pm2 restart kokoro --update-env
+npm run check:login
+```
+
+Có thể lưu `TRUST_PROXY=127.0.0.1/32,::1/128` vào .env trên một dòng riêng. Lệnh restart ở trên cập nhật cả biến môi trường PM2 để tránh giữ giá trị cũ. Công cụ check:login chỉ GET trang public; không gửi username/password và không in token hoặc cookie. Nếu báo LOGIN_COOKIE_MISSING, kiểm tra lại server HTTPS của Nginx và cấu hình proxy đang chạy. Nếu Cloudflare đứng trước Nginx, kết nối từ Cloudflare tới origin cần dùng HTTPS cho khối TLS này.
+
+Khi check:login đạt, tải lại /login để nhận token và cookie mới rồi đăng nhập. Form cũ mở trước thay đổi vẫn có thể bị từ chối. Kiểm thử production dùng replica set test đã xác nhận cookie Secure/HttpOnly/SameSite=Lax, POST hợp lệ vào /admin, đổi session sau login, từ chối token/session thiếu và mật khẩu sai.
+
+Nguồn: [Express behind proxies](https://expressjs.com/en/guide/behind-proxies/), [Express session cookie](https://expressjs.com/en/resources/middleware/session/).

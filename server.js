@@ -48,7 +48,7 @@ const { text, integer, safeImageUrl, jsonForHtml } = require("./lib/validation")
 const { messages, errorMessage } = require("./lib/messages");
 const { tokyoDate, validDate } = require("./lib/time");
 const { asset, responsiveImage, assertAssetsBuilt } = require("./lib/assets");
-const { validateConfig } = require("./lib/config");
+const { validateConfig, trustedProxies } = require("./lib/config");
 const { languageReturnPath } = require("./lib/navigation");
 const app = express();
 // Template helpers are available for every render, including early error responses.
@@ -451,7 +451,8 @@ const adminRedirect = (notice, tab = "bookings") => {
 // --- CẤU HÌNH APP ---
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
-app.set("trust proxy", process.env.TRUST_PROXY ? process.env.TRUST_PROXY.split(",").map(s => s.trim()) : false);
+// Nginx on this VPS reaches Node from loopback; never trust arbitrary remote headers.
+app.set("trust proxy", trustedProxies());
 app.use(...headers());
 app.use(compression());
 app.get("/health", (req, res) => res.status(isDbConnected() ? 200 : 503).json({ ok: isDbConnected() }));

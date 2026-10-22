@@ -1,7 +1,7 @@
 # Kết quả kiểm tra — 18/10/2026
 
 - `npm run build`: thành công, 26 tài nguyên có hash.
-- `npm test`: **54/54 đạt**, gồm toàn bộ bộ CSRF cũ, transaction sức chứa, idempotency, kiểm tra dữ liệu, worker, migration và upload.
+- `npm test`: **56/56 đạt**, gồm toàn bộ bộ CSRF cũ, transaction sức chứa, idempotency, kiểm tra dữ liệu, worker, migration và upload.
 - `npm run test:browser`: **13/13 đạt**, Chromium; 16 lượt đặt qua hai luồng trong Asia/Ho_Chi_Minh, Asia/Tokyo, UTC, America/Los_Angeles. Tất cả giữ `2026-10-19 08:00 JST`. Không có lỗi JS/CSP được phát hiện trong những trang được kiểm tra.
 - Đã tái hiện mất phản hồi sau commit và gửi lại: chỉ một đơn, một job email khách và một job email admin.
 - Giá thay đổi trả 409, giữ thông tin liên hệ, chỉ lưu sau khi khách xác nhận tổng mới.
@@ -37,3 +37,8 @@ Quy tắc cập nhật: chấp nhận mọi khung giờ còn chỗ trong hôm na
 
 
 Kiểm tra email admin: DB đang cấu hình có 2 job admin và 2 job khách đã done; không ghi dữ liệu hoặc gửi lại thông báo. Kết nối/xác thực SMTP thật qua check:mail thành công, không gửi email. Chưa thể kết luận thư đã vào Inbox. Bản sửa luôn giữ job admin ngay cả khi chưa có ADMIN_EMAIL, retry và hiển thị lỗi riêng; kiểm thử worker của cả hai luồng dùng SMTP giả lập xác minh đúng địa chỉ, thư admin riêng, Reply-To của khách và không done khi SMTP chưa chấp nhận người nhận. Địa chỉ nhận thực tế và trạng thái tắt gửi thông báo được hiển thị trên dashboard có đăng nhập. Chưa triển khai lên VPS.
+
+
+Ngày 22/10/2026: tái hiện đăng nhập production thiếu cookie Secure khi Nginx kết thúc TLS và Node không tin cậy proxy. Log VPS cũng xác nhận thiếu X-Forwarded-Proto. Test production mới thất bại trước sửa với secure_session_cookie_missing, đạt sau sửa; kiểm tra đăng nhập thật bằng tài khoản test, session rotation, CSRF và mật khẩu sai. Bổ sung check:login chỉ GET trang công khai, không gửi thông tin đăng nhập. Chưa chỉnh Nginx hoặc restart VPS trực tiếp.
+
+Hồi quy sau sửa login ngày 22/10/2026: npm test 56/56 đạt; npm run test:browser 13/13 đạt. Check login qua proxy giả lập đạt; HTTP không có header HTTPS bị phát hiện thiếu cookie như dự kiến.

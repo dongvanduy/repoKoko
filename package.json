@@ -14,7 +14,8 @@
     "seo:prepare": "node scripts/prepare-seo.js",
     "prestart": "node scripts/check-assets.js",
     "check:deploy": "node scripts/check-deploy.js",
-    "check:mail": "node scripts/check-mail.js"
+    "check:mail": "node scripts/check-mail.js",
+    "check:login": "node scripts/check-login.js"
   },
   "keywords": [],
   "author": "",

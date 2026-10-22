@@ -49,7 +49,7 @@ Rollback: dừng writer trước, backup phần dữ liệu mới, đối soát 
 
 Build bằng `npm ci && npm run build` trong CI hoặc máy build có devDependencies. Triển khai cùng `public/assets/` và `locales/seo-prepared.json`; chỉ cài dependency production ở runtime nếu cần. Assets có hash và cache immutable một năm; giữ assets của release trước khi chuyển traffic để trang đang mở vẫn tải được.
 
-Production cần `NODE_ENV=production`, `SITE_URL=https://...`, HTTPS và `TRUST_PROXY` là danh sách IP/CIDR proxy thực tế. Không đặt true hoặc số hop tùy ý. Kiểm tra X-Forwarded-Proto=https, cookie Secure/HttpOnly/SameSite=Lax và IP client chính xác trước nghiệm thu rate limit. Bí mật giống nhau giữa các instance; không lưu vào log.
+Production cần `NODE_ENV=production`, `SITE_URL=https://...` và HTTPS. Mặc định chỉ tin cậy Nginx nội bộ tại `127.0.0.1/32,::1/128`; proxy ở địa chỉ khác cần cấu hình `TRUST_PROXY` bằng danh sách IP/CIDR thực tế. `TRUST_PROXY=false` dành cho HTTPS trực tiếp. Không đặt true hoặc số hop tùy ý. Kiểm tra X-Forwarded-Proto=https, cookie Secure/HttpOnly/SameSite=Lax và IP client chính xác trước nghiệm thu rate limit. Bí mật giống nhau giữa các instance; không lưu vào log.
 
 Đặt `CSP_REPORT_ONLY=true` trên staging, xem vi phạm CSP trong trình duyệt cho trang chủ, blog, hai form, đăng nhập, drawer và upload quản trị. Sau khi sửa hết, đặt false để chặn. JS nội tuyến dùng nonce; handler HTML đã chuyển sang listener. style-src còn unsafe-inline để tương thích style/Swiper đang có; script-src không dùng unsafe-inline hoặc unsafe-eval. Chống nhúng trang qua frame-ancestors và X-Frame-Options.
 
