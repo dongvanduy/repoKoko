@@ -1,7 +1,7 @@
 # Kết quả kiểm tra — 18/10/2026
 
 - `npm run build`: thành công, 26 tài nguyên có hash.
-- `npm test`: **56/56 đạt**, gồm toàn bộ bộ CSRF cũ, transaction sức chứa, idempotency, kiểm tra dữ liệu, worker, migration và upload.
+- `npm test`: **62/62 đạt**, gồm toàn bộ bộ CSRF cũ, transaction sức chứa, idempotency, kiểm tra dữ liệu, worker, migration và upload.
 - `npm run test:browser`: **13/13 đạt**, Chromium; 16 lượt đặt qua hai luồng trong Asia/Ho_Chi_Minh, Asia/Tokyo, UTC, America/Los_Angeles. Tất cả giữ `2026-10-19 08:00 JST`. Không có lỗi JS/CSP được phát hiện trong những trang được kiểm tra.
 - Đã tái hiện mất phản hồi sau commit và gửi lại: chỉ một đơn, một job email khách và một job email admin.
 - Giá thay đổi trả 409, giữ thông tin liên hệ, chỉ lưu sau khi khách xác nhận tổng mới.
@@ -42,3 +42,8 @@ Kiểm tra email admin: DB đang cấu hình có 2 job admin và 2 job khách đ
 Ngày 22/10/2026: tái hiện đăng nhập production thiếu cookie Secure khi Nginx kết thúc TLS và Node không tin cậy proxy. Log VPS cũng xác nhận thiếu X-Forwarded-Proto. Test production mới thất bại trước sửa với secure_session_cookie_missing, đạt sau sửa; kiểm tra đăng nhập thật bằng tài khoản test, session rotation, CSRF và mật khẩu sai. Bổ sung check:login chỉ GET trang công khai, không gửi thông tin đăng nhập. Chưa chỉnh Nginx hoặc restart VPS trực tiếp.
 
 Hồi quy sau sửa login ngày 22/10/2026: npm test 56/56 đạt; npm run test:browser 13/13 đạt. Check login qua proxy giả lập đạt; HTTP không có header HTTPS bị phát hiện thiếu cookie như dự kiến.
+
+
+Ngày 23/10/2026: tái hiện ảnh JPEG 24 MP khoảng 140 KB bị bộ kiểm tra 20 MP cũ chặn và báo nhầm upload_failed. Bản sửa xử lý ảnh tới 64 MP, xoay EXIF và tối ưu WebP tối đa 2560px; test kiểm tra ảnh >5 MiB, ảnh hỏng, guard độ phân giải, alpha, dọn tạm và rollback upload dở. Cloudinary ping cục bộ đạt bằng cấu hình hiện có; không upload/xóa tài nguyên thật và không ghi production DB. Log VPS chưa có upstreamStatus nên chưa xác nhận nguyên nhân chính xác của ảnh người dùng; cần kiểm tra trên VPS sau cập nhật mã.
+
+Kết quả sau sửa ảnh 23/10/2026: npm test 62/62 đạt; npm run test:browser 13/13 đạt; build 26 tài nguyên thành công; check:uploads xác thực Cloudinary chỉ đọc đạt.

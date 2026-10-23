@@ -20,7 +20,7 @@ Các lệnh npm, node và pm2 chạy trong terminal. Không dán nguyên lệnh 
 
 Nếu API khung giờ đã trả 200 nhưng POST /booking trả 503 khi ADMIN_EMAIL có cấu hình, cần bản sửa tạo tác vụ email với ordered:true trong transaction Mongoose. Không chạy lại migration chỉ để sửa lỗi batch email này. Gửi lại form cũ sau khi cập nhật mã không tạo thêm đơn nếu lần trước đã lưu thành công.
 
-Form thêm gói cho phép mô tả trống. Ảnh JPEG/PNG/WebP tối đa 10 ảnh cho mỗi gói. Đã bỏ giới hạn dung lượng mỗi ảnh ở trình duyệt và máy chủ; vẫn kiểm tra định dạng thật, ảnh tĩnh và tối đa 20 triệu điểm ảnh khi đọc metadata. Timeout gửi Cloudinary là 120 giây. Log chỉ ghi loại/mã lỗi, không ghi request body hoặc tên file. Cloudinary không được gọi khi nội dung không phải ảnh hợp lệ.
+Form thêm gói cho phép mô tả trống. Ảnh JPEG/PNG/WebP tối đa 10 ảnh cho mỗi gói. Đã bỏ giới hạn dung lượng mỗi ảnh ở trình duyệt và máy chủ; vẫn kiểm tra định dạng thật và ảnh tĩnh. Ảnh đầu vào tối đa 64 triệu điểm ảnh được xoay theo EXIF, thu cạnh dài về tối đa 2560px và chuyển WebP trước khi gửi Cloudinary. Timeout gửi Cloudinary là 120 giây. Log chỉ ghi loại/mã lỗi, không ghi request body hoặc tên file. Cloudinary không được gọi khi nội dung không phải ảnh hợp lệ.
 
 Giới hạn ngoài ứng dụng: Cloudinary áp dụng giới hạn theo tài khoản/API, Cloudflare và Nginx có thể giới hạn request upload. Nếu bị HTTP 413 trước khi request tới Node, kiểm tra cấu hình proxy trên VPS; thay đổi mã Node không tự sửa cấu hình này. Xem [Cloudinary upload](https://cloudinary.com/documentation/node_image_and_video_upload) và [Cloudflare upload limits](https://developers.cloudflare.com/network/maximum-upload-size/).
 
@@ -148,3 +148,24 @@ Có thể lưu `TRUST_PROXY=127.0.0.1/32,::1/128` vào .env trên một dòng ri
 Khi check:login đạt, tải lại /login để nhận token và cookie mới rồi đăng nhập. Form cũ mở trước thay đổi vẫn có thể bị từ chối. Kiểm thử production dùng replica set test đã xác nhận cookie Secure/HttpOnly/SameSite=Lax, POST hợp lệ vào /admin, đổi session sau login, từ chối token/session thiếu và mật khẩu sai.
 
 Nguồn: [Express behind proxies](https://expressjs.com/en/guide/behind-proxies/), [Express session cookie](https://expressjs.com/en/resources/middleware/session/).
+
+## Tạo gói báo upload_failed — xử lý ảnh và Cloudinary
+
+Ảnh chụp ngày 23/10/2026 báo lỗi tải ảnh khi POST /admin/plan/save. Log VPS chỉ có causeName=Error, chưa có upstreamStatus nên chưa đủ kết luận Cloudinary lỗi. Đã tái hiện độc lập: JPEG 24 MP chỉ khoảng 140 KB bị giới hạn 20 MP cũ chặn và bị báo nhầm lỗi lưu trữ.
+
+Bản sửa chấp nhận ảnh tĩnh JPEG/PNG/WebP tới 64 MP, tự xoay và tối ưu WebP cạnh dài tối đa 2560px trước khi upload. Vẫn không giới hạn dung lượng file đầu vào 5 MiB. Ảnh hỏng/quá độ phân giải trả 400 với thông báo riêng; lỗi xác thực, hết hạn mức hoặc dung lượng Cloudinary được phân loại. Nếu ảnh thứ hai lỗi, ảnh trước đã tải được trong cùng yêu cầu được dọn; không lưu gói thiếu ảnh.
+
+Sau khi cập nhật mã trên VPS:
+
+```bash
+cd /var/www/kokorokimono/repoKoko
+npm run build
+npm run check:uploads
+pm2 restart kokoro --update-env
+```
+
+check:uploads xác thực bằng API ping chỉ đọc; không upload, xóa ảnh hoặc ghi DB. Nó kiểm tra môi trường shell/.env, không đảm bảo tiến trình PM2 đang có cùng biến môi trường.
+
+Các biến Cloudinary: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY và CLOUDINARY_SECRET (hoặc CLOUDINARY_API_SECRET). Bản cũ chỉ có CLOUDINARY_SECRET tiếp tục dùng cloud name/API key mặc định của tài khoản cũ; khi dùng tài khoản mới cần khai báo đủ cả ba giá trị. Không dán secret vào terminal log hoặc gửi ảnh chụp .env. Thay cấu hình cần restart worker/server để áp dụng.
+
+Nếu vẫn lỗi, lấy dòng mới của /admin/plan/save. Các mã mới: image_dimensions_too_large, upload_processing_failed, upload_not_configured, upload_auth_failed, upload_service_limit, upload_too_large, upload_rejected. Đây là lỗi luồng ảnh, không cần chạy migration bộ đếm booking để sửa.

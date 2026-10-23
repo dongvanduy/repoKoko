@@ -185,6 +185,12 @@ test("both booking flows preserve Tokyo wall time in four browser zones; admin a
       const response=await context.request.post(base+"/admin/plan/save",{multipart:{csrfToken,title:"Invalid image",price:"4500",desc:"",photos:{name:"fake.png",mimeType:"image/png",buffer:Buffer.from("<script>alert(1)</script>")}}});
       assert.equal(response.status(),400);assert.match(await response.text(),/JPEG.*PNG.*WebP/);
       assert.equal(calls,1);assert.equal(await Plan.countDocuments({"title.en":"Invalid image"}),0);
+      cloud.uploader.upload=async()=>{throw{http_code:401,message:"Invalid Signature private-secret"};};
+      const photo=await require("sharp")({create:{width:20,height:20,channels:3,background:"red"}}).jpeg().toBuffer();
+      const failed=await context.request.post(base+"/admin/plan/save",{multipart:{csrfToken,title:"Storage error",price:"4500",desc:"",photos:{name:"photo.jpg",mimeType:"image/jpeg",buffer:photo}}});
+      assert.equal(failed.status(),503);
+      const errorPage=await failed.text();assert.match(errorPage,/Cloudinary authentication failed/);assert.doesNotMatch(errorPage,/private-secret/);
+      assert.equal(await Plan.countDocuments({"title.en":"Storage error"}),0);
     }finally{cloud.uploader.upload=original;await context.close();}
   });
   await t.test("slot requests ignore late responses and expose a retry after errors",async()=>{

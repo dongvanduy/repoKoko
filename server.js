@@ -394,11 +394,7 @@ const getAdminBlogPosts = async () => {
 };
 
 // External services are configured here but connected only in start().
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dgpfqmncu",
-  api_key: process.env.CLOUDINARY_API_KEY || "324438863362332",
-  api_secret: process.env.CLOUDINARY_SECRET,
-});
+cloudinary.config(require("./lib/cloudinary-config").cloudinaryConfiguration());
 
 const normalizeEnv = (value) => {
   if (typeof value !== "string") return "";

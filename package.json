@@ -15,7 +15,8 @@
     "prestart": "node scripts/check-assets.js",
     "check:deploy": "node scripts/check-deploy.js",
     "check:mail": "node scripts/check-mail.js",
-    "check:login": "node scripts/check-login.js"
+    "check:login": "node scripts/check-login.js",
+    "check:uploads": "node scripts/check-uploads.js"
   },
   "keywords": [],
   "author": "",

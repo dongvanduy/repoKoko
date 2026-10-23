@@ -3,7 +3,7 @@ const os = require("node:os");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const multer = require("multer");
-const sharp = require("sharp");
+const { prepareImage, storageUploadError } = require("../services/upload-images");
 const cloudinary = require("cloudinary").v2;
 const { adminUploadFileFilter } = require("./admin-csrf");
 const { AppError } = require("../lib/errors");
@@ -38,23 +38,22 @@ async function publishUploads(req, res, next) {
   const files = req.file ? [req.file] : req.files || [];
   const published = [];
   try {
-    const { fileTypeFromFile } = await import("file-type");
-    for (const file of files) {
-      const kind = await fileTypeFromFile(file.path);
-      if (!kind || !["image/jpeg", "image/png", "image/webp"].includes(kind.mime)) throw new AppError(400, "invalid_image");
-      const metadata = await sharp(file.path, { limitInputPixels: 20000000 }).metadata();
-      if (!["jpeg", "png", "webp"].includes(metadata.format) || (metadata.pages || 1) > 1) throw new AppError(400, "invalid_image");
-    }
+    const preparedFiles = [];
     for (const file of files) {
       if (req.aborted || res.destroyed) throw new AppError(400, "upload_aborted");
-      const result = await cloudinary.uploader.upload(file.path, { folder: "kokoro_shop", resource_type: "image", timeout: 120000 });
+      preparedFiles.push({ file, path: await prepareImage(file.path) });
+    }
+    for (const prepared of preparedFiles) {
+      const file = prepared.file;
+      if (req.aborted || res.destroyed) throw new AppError(400, "upload_aborted");
+      const result = await cloudinary.uploader.upload(prepared.path, { folder: "kokoro_shop", resource_type: "image", timeout: 120000 });
       published.push(result.public_id);
       file.path = result.secure_url;
     }
     next();
   } catch (error) {
     await Promise.allSettled(published.map(id => cloudinary.uploader.destroy(id)));
-    next(error instanceof AppError ? error : Object.assign(new AppError(503, "upload_failed"), { cause: error }));
+    next(storageUploadError(error));
   } finally { await cleanup(req).catch(() => {}); }
 }
 module.exports = { upload, manageUploads, publishUploads, cleanup };

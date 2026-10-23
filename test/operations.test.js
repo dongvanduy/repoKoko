@@ -80,9 +80,9 @@ test("upload accepts images above 5 MiB and checks CSRF, real content and tempor
   const {upload,manageUploads,publishUploads}=require("../middleware/uploads");
   const {requireAdminCsrf}=require("../middleware/admin-csrf");
   const cloud=require("cloudinary").v2;
-  const original=cloud.uploader.upload;let calls=0;
-  cloud.uploader.upload=async()=>{calls++;return{secure_url:"https://example.invalid/image.png",public_id:"test"};};
-  t.after(()=>{cloud.uploader.upload=original;});
+  const original=cloud.uploader.upload,originalDestroy=cloud.uploader.destroy;let calls=0;
+  cloud.uploader.upload=async file=>{calls++;const metadata=await sharp(file).metadata();assert.equal(metadata.format,"webp");assert.ok(metadata.width<=2560&&metadata.height<=2560);return{secure_url:"https://example.invalid/image.webp",public_id:"test"};};
+  t.after(()=>{cloud.uploader.upload=original;cloud.uploader.destroy=originalDestroy;});
   const token="a".repeat(64);const dirs=[];
   const app=express();
   app.use((req,res,next)=>{req.session={isAdmin:true,adminCsrfToken:token};res.on("finish",()=>{if(req.uploadDirectoryPromise)dirs.push(req.uploadDirectoryPromise);});next();});
@@ -99,5 +99,13 @@ test("upload accepts images above 5 MiB and checks CSRF, real content and tempor
   const largePng=await sharp({create:{width:2000,height:1200,channels:3,background:"red"}}).png({compressionLevel:0}).toBuffer();
   assert.ok(largePng.length>5*1024*1024);
   assert.equal((await submit(largePng)).status,200);assert.equal(calls,2);
+  let published=0;const removed=[];
+  cloud.uploader.upload=async()=>{if(++published===2)throw{http_code:401,message:"private-cloud-error"};return{secure_url:"https://example.invalid/first.webp",public_id:"first-test"};};
+  cloud.uploader.destroy=async id=>{removed.push(id);};
+  const multiple=new FormData();multiple.append("csrfToken",token);
+  for(let i=0;i<2;i++)multiple.append("photos",new Blob([png],{type:"image/png"}),"photo.png");
+  const failure=await fetch(url,{method:"POST",body:multiple});
+  assert.equal(failure.status,503);assert.equal((await failure.json()).code,"upload_auth_failed");
+  assert.deepEqual(removed,["first-test"]);
   for(const promise of dirs){const dir=await promise;for(let i=0;i<50;i++){try{await fs.access(dir);await new Promise(r=>setTimeout(r,10));}catch{break;}}await assert.rejects(fs.access(dir));}
 });
